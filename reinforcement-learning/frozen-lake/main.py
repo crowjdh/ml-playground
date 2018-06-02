@@ -2,26 +2,65 @@ import sys, os
 import curses
 from time import sleep
 import matplotlib.pyplot as plt
+import numpy as np
 import keyboard
 
 import model
+from env import Lake
+
+interactive_mode = True
 
 is_paused = False
 step_once = False
 delays = [0.5, 0.2, 0.1, 0.05, 0.01]
 delay_idx = 2
 
+lake = Lake(is_slippery=True)
+
 
 def main():
-    curses.wrapper(train_and_draw)
+    if interactive_mode:
+        curses.wrapper(train_and_draw)
+    else:
+        global history, lake
+        history = model.train(lake)
+
+    plot_history()
 
 
-def pre_action_callback(stdscr, board, Q, episode, state, action):
+def plot_history():
+    global history
+
+    print(history['Q'])
+
+    rewards = np.array(history['rewards'])
+    success_rate = rewards.sum() / len(rewards)
+    print('success_rate: {}'.format(success_rate))
+
+    for i, key in enumerate(history):
+        if key == 'Q':
+            continue
+        plt.subplot(len(history), 1, i + 1)
+        plt.ylabel(key)
+        plt.plot(history[key])
+    plt.show()
+
+
+def action_callback(board, Q, episode, state, action, actual_action):
+    global callback_cursor
+    stdscr = callback_cursor
+
     stdscr.clear()
 
     episode_str = 'episode: ' + str(episode)
-    action_str = ['up', 'right', 'down', 'left'][action] if 'action' in locals() and action else ''
-    stdscr.addstr(0, 0, episode_str + ', action: ' + str(action) + ', state: ' + str(state) + ', direction: ' + action_str)
+    possible_actions = ['up', 'right', 'down', 'left']
+    describe_action = lambda act: possible_actions[act] if act >= 0 else ''
+    message = episode_str + ', state: ' + str(state)
+    if action >= 0 and actual_action >= 0:
+        action_str = describe_action(action)
+        actual_action_str = describe_action(actual_action)
+        message += ', action: ' + action_str + ', actual_action: ' + actual_action_str
+    stdscr.addstr(0, 0, message)
 
     for r in range(Q.shape[0]):
         for c in range(Q.shape[1]):
@@ -34,26 +73,21 @@ def pre_action_callback(stdscr, board, Q, episode, state, action):
             else:
                 val = ''
             up, right, down, left = Q[r, c]
-            first_line = '  {:2d}  '.format(up)
-            second_line_1 = '{:2d}'.format(left)
-            second_line_2 = '{:2s}'.format(val)
-            second_line_3 = '{:2d}'.format(right)
-            third_line = '  {:2d}  '.format(down)
+            first_line = '{:^16.1f}'.format(up)
+            second_line_1 = '{:^6.1f}'.format(left)
+            second_line_2 = '{:^4s}'.format(val)
+            second_line_3 = '{:^6.1f}'.format(right)
+            third_line = '{:^16.1f}'.format(down)
 
-            box_start = (r * 4, c * 8)
-            stdscr.attron(curses.color_pair(1))
-            stdscr.addstr(box_start[0] + 1, box_start[1] + 1, first_line)
-            stdscr.addstr(box_start[0] + 2, box_start[1] + 1, second_line_1)
-            stdscr.attroff(curses.color_pair(1))
+            box_start = (r * 4, c * 16)
 
-            stdscr.attron(curses.color_pair(2))
-            stdscr.addstr(box_start[0] + 2, box_start[1] + 3, second_line_2)
-            stdscr.attroff(curses.color_pair(2))
+            stdscr.addstr(box_start[0] + 1, box_start[1] + 1, first_line, curses.color_pair(1))
 
-            stdscr.attron(curses.color_pair(1))
-            stdscr.addstr(box_start[0] + 2, box_start[1] + 5, second_line_3)
-            stdscr.addstr(box_start[0] + 3, box_start[1] + 1, third_line)
-            stdscr.attroff(curses.color_pair(1))
+            stdscr.addstr(box_start[0] + 2, box_start[1] + 1, second_line_1, curses.color_pair(1))
+            stdscr.addstr(box_start[0] + 2, box_start[1] + 7, second_line_2, curses.color_pair(2))
+            stdscr.addstr(box_start[0] + 2, box_start[1] + 11, second_line_3, curses.color_pair(1))
+
+            stdscr.addstr(box_start[0] + 3, box_start[1] + 1, third_line, curses.color_pair(1))
 
     height, width = stdscr.getmaxyx()
     if is_privileged_mode():
@@ -111,14 +145,16 @@ def train_and_draw(stdscr):
     curses.start_color()
     curses.init_pair(1, curses.COLOR_CYAN, curses.COLOR_BLACK)
     curses.init_pair(2, curses.COLOR_RED, curses.COLOR_BLACK)
+    curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_WHITE)
 
     stdscr.clear()
     height, width = stdscr.getmaxyx()
 
     hook_keyboard_event()
 
-    # Train
-    rewards = model.train(stdscr, pre_action_callback)
+    global history, callback_cursor, lake
+    callback_cursor = stdscr
+    history = model.train(lake, action_callback=action_callback)
 
     height, width = stdscr.getmaxyx()
     stdscr.addstr(height - 2, 0, ' ' * (width - 1))
