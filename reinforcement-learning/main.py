@@ -5,17 +5,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 import keyboard
 
-import model
-from env import Lake
+import models.q_learning as q_learning
+from environments.frozen_lake import FrozenLake
 
-interactive_mode = True
+interactive_mode = False
 
 is_paused = False
 step_once = False
 delays = [0.5, 0.2, 0.1, 0.05, 0.01]
 delay_idx = 2
 
-lake = Lake(is_slippery=True)
+lake = FrozenLake(is_slippery=True)
 
 
 def main():
@@ -23,7 +23,7 @@ def main():
         curses.wrapper(train_and_draw)
     else:
         global history, lake
-        history = model.train(lake)
+        history = q_learning.train(lake)
 
     plot_history()
 
@@ -154,7 +154,7 @@ def train_and_draw(stdscr):
 
     global history, callback_cursor, lake
     callback_cursor = stdscr
-    history = model.train(lake, action_callback=action_callback)
+    history = q_learning.train(lake, action_callback=action_callback)
 
     height, width = stdscr.getmaxyx()
     stdscr.addstr(height - 2, 0, ' ' * (width - 1))

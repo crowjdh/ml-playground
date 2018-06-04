@@ -1,6 +1,6 @@
 import numpy as np
 
-class Lake(object):
+class FrozenLake(object):
     def __init__(self, is_slippery=True):
         pitfalls = [1, 1, 2, 3],\
                    [1, 3, 3, 0]
