@@ -1,9 +1,10 @@
 import numpy as np
 import ene
+from utils.functions import noop
 
 
-def train(lake, episode_size = 2000, action_callback=None, ene_mode='noise'):
-    action_size = len(lake.action_position_map)
+def train(lake, episode_size=2000, action_callback=noop, ene_mode='e-greedy'):
+    action_size = lake.action_size
     Q_sizes = list(lake.lake_size) + [action_size]
     Q = np.zeros(np.prod(Q_sizes), dtype=np.float).reshape(Q_sizes)
     ene_method = ene.modes[ene_mode]
@@ -20,8 +21,7 @@ def train(lake, episode_size = 2000, action_callback=None, ene_mode='noise'):
         learning_rate = .85
 
         while not done:
-            if action_callback:
-                action_callback(lake.lake, Q, episode, state, action, actual_action)
+            action_callback(lake, Q, episode, state, action, actual_action)
 
             possible_actions = Q[state]
             action = ene_method(episode, possible_actions, history)
@@ -33,8 +33,7 @@ def train(lake, episode_size = 2000, action_callback=None, ene_mode='noise'):
             state = new_state
             total_reward += reward
 
-            if action_callback:
-                action_callback(lake.lake, Q, episode, state, action, actual_action)
+            action_callback(lake, Q, episode, state, action, actual_action)
 
         history['rewards'].append(total_reward)
 

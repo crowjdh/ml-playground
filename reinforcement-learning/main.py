@@ -5,8 +5,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import keyboard
 
-import models.q_learning as q_learning
 from environments.frozen_lake import FrozenLake
+from learn.q_learning import train as q_learning_train
+from learn.dqn import train as dqn_train
 
 interactive_mode = False
 
@@ -15,21 +16,26 @@ step_once = False
 delays = [0.5, 0.2, 0.1, 0.05, 0.01]
 delay_idx = 2
 
-lake = FrozenLake(is_slippery=True)
+lake = FrozenLake(is_slippery=False)
+# lake = FrozenLake(is_slippery=True)
 
 
 def main():
+    global train
+    train = dqn_train
     if interactive_mode:
         curses.wrapper(train_and_draw)
     else:
         global history, lake
-        history = q_learning.train(lake)
+        history = train(lake)
 
     plot_history()
 
 
 def plot_history():
     global history
+    if not history:
+        return
 
     print(history['Q'])
 
@@ -46,7 +52,7 @@ def plot_history():
     plt.show()
 
 
-def action_callback(board, Q, episode, state, action, actual_action):
+def action_callback(lake, Q, episode, state, action, actual_action):
     global callback_cursor
     stdscr = callback_cursor
 
@@ -66,9 +72,9 @@ def action_callback(board, Q, episode, state, action, actual_action):
         for c in range(Q.shape[1]):
             if state == (r, c):
                 val = 'AI'
-            elif board[r, c] == -1:
+            elif (r, c) in lake.pitfalls:
                 val = 'XX'
-            elif board[r, c] == 1:
+            elif (r, c) == lake.goal:
                 val = '!!'
             else:
                 val = ''
@@ -152,9 +158,9 @@ def train_and_draw(stdscr):
 
     hook_keyboard_event()
 
-    global history, callback_cursor, lake
+    global history, callback_cursor, lake, train
     callback_cursor = stdscr
-    history = q_learning.train(lake, action_callback=action_callback)
+    history = train(lake, action_callback=action_callback)
 
     height, width = stdscr.getmaxyx()
     stdscr.addstr(height - 2, 0, ' ' * (width - 1))

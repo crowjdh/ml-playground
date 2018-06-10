@@ -1,0 +1,2 @@
+def noop(*params):
+    pass
