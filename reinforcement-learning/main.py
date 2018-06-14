@@ -159,7 +159,6 @@ def train_and_draw(stdscr):
     curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_WHITE)
 
     stdscr.clear()
-    # height, width = stdscr.getmaxyx()
 
     hook_keyboard_event()
 
