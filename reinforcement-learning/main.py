@@ -14,17 +14,21 @@ is_paused = False
 step_once = False
 delays = [0.5, 0.2, 0.1, 0.05, 0.01]
 delay_idx = 2
+training_methods = {
+    'q': q_learning_train,
+    'dqn': dqn_train
+}
 
 
 def main():
-    global train, lake
+    args = parse_arguments()
 
-    train = dqn_train
+    global train, lake
+    train = training_methods[args.method]
     lake = FrozenLake(is_slippery=False)
     # lake = FrozenLake(is_slippery=True)
 
-    args = parse_arguments()
-    if args.i:
+    if args.interactive:
         curses.wrapper(train_and_draw)
     else:
         global history
@@ -37,8 +41,11 @@ def parse_arguments():
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', help='Enable interactive mode',
-                        action='store_true')
+    parser.add_argument('-i', dest='interactive', action='store_true',
+                        help='Enable interactive mode')
+    parser.add_argument('--method', action='store',
+                        choices=['q', 'dqn'], default='dqn',
+                        help='Mode')
     return parser.parse_args()
 
 
@@ -60,6 +67,8 @@ def plot_history():
         plt.ylabel(key)
         plt.plot(history[key])
     plt.show()
+
+    print("See plot for more detail.")
 
 
 def action_callback(lake, Q, episode, state, action, actual_action):
