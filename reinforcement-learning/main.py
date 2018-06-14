@@ -64,7 +64,7 @@ def plot_history():
 
 def action_callback(lake, Q, episode, state, action, actual_action):
     state = lake.unflatten_state(state)
-    Q = Q.reshape(list(lake.lake_size) + [lake.action_size])
+    Q = Q.reshape(list(lake.state_shape) + [lake.action_size])
 
     global callback_cursor
     stdscr = callback_cursor

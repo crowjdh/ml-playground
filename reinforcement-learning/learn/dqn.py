@@ -95,7 +95,7 @@ def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode)
 
             action_callback(env, Q, episode, state, action, actual_action)
 
-        avg_reward = np.mean(last_100_games_rewards)
+        avg_reward = np.mean(last_100_games_rewards) if len(last_100_games_rewards) > 0 else -1
         avg_reward = (avg_reward + 1) / 2
         print("Episode: {:5.0f}, steps: {:5.0f}, rewards: {:2.0f}, avg_reward:{:6.2f}"
               .format(episode, steps, reward_sum, avg_reward))
