@@ -2,18 +2,19 @@ import numpy as np
 from utils.math_utils import rand_argmax
 
 
-def select_with_noise(episode, possible_actions, history=None):
-    noise = np.random.randn(len(possible_actions)) / (episode + 1)
+def select_with_noise(episode, state, action_spec, history=None):
+    noise = np.random.randn(action_spec['count']) / (episode + 1)
+    actions = action_spec['generator'](state)
 
-    action = np.argmax(possible_actions + noise)
+    action = np.argmax(actions + noise)
 
-    action_wo_noise = rand_argmax(possible_actions)
+    action_wo_noise = rand_argmax(actions)
     fill_history(history, ['noised', action != action_wo_noise], ['noise', noise])
 
     return action
 
 
-def select_with_e_greedy(episode, possible_actions, history=None):
+def select_with_e_greedy(episode, state, action_spec, history=None):
     e = 1. / ((episode / 10) + 1)
 
     choose_action_randomly = (np.random.rand(1) < e)[0]
@@ -21,9 +22,9 @@ def select_with_e_greedy(episode, possible_actions, history=None):
     fill_history(history, ['randomly_selected', choose_action_randomly], ['e', e])
 
     if choose_action_randomly:
-        return np.random.choice(len(possible_actions))
+        return np.random.choice(action_spec['count'])
     else:
-        return rand_argmax(possible_actions)
+        return rand_argmax(action_spec['generator'](state))
 
 
 def fill_history(history, *entries):

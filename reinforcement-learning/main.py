@@ -1,4 +1,4 @@
-import sys, os
+import os
 import curses
 from time import sleep
 import matplotlib.pyplot as plt
@@ -6,6 +6,7 @@ import numpy as np
 import keyboard
 
 from environments.frozen_lake import FrozenLake
+# noinspection PyUnresolvedReferences
 from learn.q_learning import train as q_learning_train
 from learn.dqn import train as dqn_train
 
@@ -53,6 +54,9 @@ def plot_history():
 
 
 def action_callback(lake, Q, episode, state, action, actual_action):
+    state = lake.unflatten_state(state)
+    Q = Q.reshape(list(lake.lake_size) + [lake.action_size])
+
     global callback_cursor
     stdscr = callback_cursor
 
@@ -78,6 +82,7 @@ def action_callback(lake, Q, episode, state, action, actual_action):
                 val = '!!'
             else:
                 val = ''
+
             up, right, down, left = Q[r, c]
             first_line = '{:^16.1f}'.format(up)
             second_line_1 = '{:^6.1f}'.format(left)
@@ -154,7 +159,7 @@ def train_and_draw(stdscr):
     curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_WHITE)
 
     stdscr.clear()
-    height, width = stdscr.getmaxyx()
+    # height, width = stdscr.getmaxyx()
 
     hook_keyboard_event()
 

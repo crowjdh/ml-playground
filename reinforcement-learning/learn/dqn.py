@@ -4,107 +4,101 @@ from collections import deque
 
 import ene
 from models.dqn import DQN
-from environments.frozen_lake import FrozenLake
 from utils.functions import noop
+from utils.logger import Logger
+
+DISCOUNT_RATE = 0.99
+REPLAY_MEMORY = 50000
+BATCH_SIZE = 64
+TARGET_UPDATE_FREQUENCY = 5
 
 
-def train(lake, episode_size=10000, action_callback=noop, ene_mode='e-greedy'):
+def simulate_play(env, dqn, count=10):
+    for i in range(count):
+        state = env.reset()
+        done = False
+        reward_sum = 0
+
+        while not done:
+            action = np.argmax(dqn.predict(state))
+            actual_action, new_state, reward, done = env.step(action)
+            reward_sum += reward
+            state = new_state
+
+        print("reward_sum: {}".format(reward_sum))
+
+
+def log_Q(Q, episode, env, logger):
+    summary = env.get_summary_lines(Q)
+    logger.log('Episode {}\n'.format(episode))
+    logger.log(summary)
+
+
+def train(env, episodes=5000, action_callback=noop, ene_mode='e-greedy'):
     select = ene.modes[ene_mode]
     replay_memory = deque(maxlen=50000)
+    last_100_games_rewards = deque(maxlen=100)
 
-    # input_dim = np.prod(lake.lake_size)
-    input_dim = 1
-    output_size = lake.action_size
-    discount_factor = 0.9
-
-    # These constant values may cause performance issue.
-    # Move replay train outside while loop when increasing greater than 1.
-    replay_learn_freq = 10
-    update_target_dqn_freq = replay_learn_freq * 5
-    learn_start = 10
+    input_dim = np.prod(env.state_shape)
+    output_dim = env.action_size
 
     with tf.Session() as sess:
         tf.logging.set_verbosity(tf.logging.INFO)
+
         # target_dqn is slightly behind main_dqn(therefore, target_dqn has slightly old parameters),
         # so that training is done on stationary target.
-        main_dqn = DQN(sess, input_dim, output_size, hidden_sizes=[20, 10], learning_rate=1e-1, name='main', Q_formatter=lake.Q_formatter)
-        target_dqn = DQN(sess, input_dim, output_size, hidden_sizes=[20, 10], learning_rate=1e-1, name='target', Q_formatter=lake.Q_formatter, write_tensor_log=False)
+        main_dqn = DQN(sess, input_dim, output_dim, hidden_sizes=[32, 16], learning_rate=1e-3, name='main')
+        target_dqn = DQN(sess, input_dim, output_dim, hidden_sizes=[32, 16], learning_rate=1e-3, name='target',
+                         write_tensor_log=False)
+        logger = Logger(main_dqn.log_name)
+
         with main_dqn, target_dqn:
             tf.global_variables_initializer().run()
 
             copy_operations = target_dqn.build_copy_variables_from_operation(main_dqn)
             sess.run(copy_operations)
 
-            # if True:
-            #     states = [
-            #         # 0,
-            #         # 0,
-            #         14]
-            #     rewards = [
-            #         # [-1, 0, 0, 0],
-            #         # [0, 0, 0, 0],
-            #         [0, 100, 0, 0]
-            #     ]
-            #     loss = main_dqn.update(states, rewards)
-            #     Q_after = main_dqn.get_Q()
-            #     return
+            action_spec = {
+                'count': env.action_size,
+                'generator': lambda s: main_dqn.predict(s)[0],
+            }
 
-            reward_sum = None
-            best_reward_sum = None
-            for episode_idx in range(episode_size):
-                state = FrozenLake.flatten_state(lake.reset())
+            for episode in range(episodes):
+                state = env.reset()
                 done = False
+                reward_sum = 0
+                steps = 0
 
-                Q = main_dqn.get_Q().reshape(list(lake.lake_size) + [lake.action_size])
+                Q = main_dqn.predict(range(16))
+                log_Q(Q, episode, env, logger)
                 while not done:
-                    action = select(episode_idx, main_dqn.predict(state)[0])
-                    actual_action, new_state, reward, done = lake.step(action)
-                    if done:
-                        if reward != 1:
-                            reward = -10
-                        else:
-                            reward = 10
+                    action = select(episode, state, action_spec)
+                    actual_action, new_state, reward, done = env.step(action)
 
-                    new_state = FrozenLake.flatten_state(new_state)
+                    if done and reward != 1:
+                        reward = -1
+                    reward_sum += reward
+
                     replay_memory.append((state, action, reward, new_state, done))
-                    if not reward_sum:
-                        reward_sum = reward
-                    else:
-                        reward_sum += reward
+
+                    if len(replay_memory) > BATCH_SIZE:
+                        DQN.replay_train(main_dqn, target_dqn, replay_memory, DISCOUNT_RATE, minibatch_size=BATCH_SIZE)
+                    if steps % TARGET_UPDATE_FREQUENCY == 0:
+                        sess.run(copy_operations)
 
                     state = new_state
-                    # steps += 1
+                    steps += 1
 
-                    unflattened_state = FrozenLake.unflatten_state(state)
-                    action_callback(lake, Q, episode_idx, unflattened_state, action, actual_action)
+                    action_callback(env, Q, episode, state, action, actual_action)
 
-                if not best_reward_sum:
-                    best_reward_sum = reward_sum
+                avg_reward = np.mean(last_100_games_rewards)
+                avg_reward = (avg_reward + 1) / 2
+                print("Episode: {:5.0f}, steps: {:5.0f}, rewards: {:2.0f}, avg_reward:{:6.2f}"
+                      .format(episode, steps, reward_sum, avg_reward))
+                last_100_games_rewards.append(reward_sum)
 
-                if episode_idx >= learn_start and episode_idx % replay_learn_freq == 0:
-                    main_dqn.log('Episode {}\n'.format(episode_idx))
-                    main_dqn.log('Main DQN(before):')
-                    Q_before = main_dqn.get_Q()
-                    main_dqn.log(main_dqn.Q_formatter(Q_before))
-
-                    loss = DQN.replay_train(main_dqn, target_dqn, replay_memory, discount_factor, minibatch_size=500)
-
-                    main_dqn.log('Main DQN(after):')
-                    Q_after = main_dqn.get_Q()
-                    main_dqn.log(main_dqn.Q_formatter(Q_after))
-
-                    main_dqn.log('Main DQN diff:')
-                    main_dqn.log(main_dqn.Q_formatter(Q_after - Q_before))
-
-                    main_dqn.log('='*80 + '\n')
-
-                    # if reward_sum > best_reward_sum:
-                    #     best_reward_sum = reward_sum
-                    #     sess.run(copy_operations)
-
-                    print("episode {:4d}\treward_sum: {}, loss: {}".format(episode_idx, reward_sum, loss))
-                    reward_sum = 0
-                    # sess.run(copy_operations)
-
-                if episode_idx >= learn_start and episode_idx % update_target_dqn_freq == 0:
-                    sess.run(copy_operations)
+                if len(last_100_games_rewards) == last_100_games_rewards.maxlen:
+                    if avg_reward > env.threshold:
+                        print(f"Game Cleared in {episode} episodes with avg reward {avg_reward}")
+                        simulate_play(env, main_dqn)
+                        break
