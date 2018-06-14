@@ -1,41 +1,67 @@
-import sys, os
+import os
 import curses
 from time import sleep
 import matplotlib.pyplot as plt
 import numpy as np
 import keyboard
 
-import models.q_learning as q_learning
 from environments.frozen_lake import FrozenLake
-
-interactive_mode = False
+# noinspection PyUnresolvedReferences
+from learn.q_learning import train as q_learning_train
+from learn.dqn import train as dqn_train
 
 is_paused = False
 step_once = False
 delays = [0.5, 0.2, 0.1, 0.05, 0.01]
 delay_idx = 2
-
-lake = FrozenLake(is_slippery=True)
+training_methods = {
+    'q': q_learning_train,
+    'dqn': dqn_train
+}
 
 
 def main():
-    if interactive_mode:
+    args = parse_arguments()
+
+    global train, lake
+    train = training_methods[args.method]
+    lake = FrozenLake(is_slippery=False)
+    # lake = FrozenLake(is_slippery=True)
+
+    if args.method == 'dqn':
+        lake.reward_processor = lambda a, s, r, d: -1 if d and r != 1 else r
+
+    if args.interactive:
         curses.wrapper(train_and_draw)
     else:
-        global history, lake
-        history = q_learning.train(lake)
+        global history
+        history = train(lake)
 
     plot_history()
 
 
+def parse_arguments():
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', dest='interactive', action='store_true',
+                        help='Enable interactive mode')
+    parser.add_argument('--method', action='store',
+                        choices=['q', 'dqn'], default='dqn',
+                        help='Mode')
+    return parser.parse_args()
+
+
 def plot_history():
     global history
+    if not history:
+        return
 
     print(history['Q'])
 
     rewards = np.array(history['rewards'])
     success_rate = rewards.sum() / len(rewards)
-    print('success_rate: {}'.format(success_rate))
+    print("success_rate: {}\nSee plot for more detail.".format(success_rate))
 
     for i, key in enumerate(history):
         if key == 'Q':
@@ -46,7 +72,10 @@ def plot_history():
     plt.show()
 
 
-def action_callback(board, Q, episode, state, action, actual_action):
+def action_callback(lake, Q, episode, state, action, actual_action):
+    state = lake.unflatten_state(state)
+    Q = Q.reshape(list(lake.state_shape) + [lake.action_size])
+
     global callback_cursor
     stdscr = callback_cursor
 
@@ -66,12 +95,13 @@ def action_callback(board, Q, episode, state, action, actual_action):
         for c in range(Q.shape[1]):
             if state == (r, c):
                 val = 'AI'
-            elif board[r, c] == -1:
+            elif (r, c) in lake.pitfalls:
                 val = 'XX'
-            elif board[r, c] == 1:
+            elif (r, c) == lake.goal:
                 val = '!!'
             else:
                 val = ''
+
             up, right, down, left = Q[r, c]
             first_line = '{:^16.1f}'.format(up)
             second_line_1 = '{:^6.1f}'.format(left)
@@ -148,13 +178,12 @@ def train_and_draw(stdscr):
     curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_WHITE)
 
     stdscr.clear()
-    height, width = stdscr.getmaxyx()
 
     hook_keyboard_event()
 
-    global history, callback_cursor, lake
+    global history, callback_cursor, lake, train
     callback_cursor = stdscr
-    history = q_learning.train(lake, action_callback=action_callback)
+    history = train(lake, action_callback=action_callback)
 
     height, width = stdscr.getmaxyx()
     stdscr.addstr(height - 2, 0, ' ' * (width - 1))
