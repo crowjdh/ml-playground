@@ -28,6 +28,9 @@ def main():
     lake = FrozenLake(is_slippery=False)
     # lake = FrozenLake(is_slippery=True)
 
+    if args.method == 'dqn':
+        lake.reward_processor = lambda a, s, r, d: -1 if d and r != 1 else r
+
     if args.interactive:
         curses.wrapper(train_and_draw)
     else:
@@ -58,7 +61,7 @@ def plot_history():
 
     rewards = np.array(history['rewards'])
     success_rate = rewards.sum() / len(rewards)
-    print('success_rate: {}'.format(success_rate))
+    print("success_rate: {}\nSee plot for more detail.".format(success_rate))
 
     for i, key in enumerate(history):
         if key == 'Q':
@@ -67,8 +70,6 @@ def plot_history():
         plt.ylabel(key)
         plt.plot(history[key])
     plt.show()
-
-    print("See plot for more detail.")
 
 
 def action_callback(lake, Q, episode, state, action, actual_action):

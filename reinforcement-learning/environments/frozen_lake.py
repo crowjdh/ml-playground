@@ -24,6 +24,7 @@ class FrozenLake(object):
             lambda: (self.state[0], self.state[1] - 1)
         ]
         self.action_size = len(self.action_position_map)
+        self.reward_processor = None
 
     def step(self, action):
         if self.is_slippery:
@@ -52,10 +53,14 @@ class FrozenLake(object):
         state = self.action_position_map[action]()
         self.state = self.clamp(state)
 
-        reward = self.lake[self.state]
         done = self.state == self.goal or self.state in self.pitfalls
+        reward = self.lake[self.state]
 
-        return action, self._get_flattened_state(), reward, done
+        flattened_state = self._get_flattened_state()
+        if self.reward_processor:
+            reward = self.reward_processor(action, flattened_state, reward, done)
+
+        return action, flattened_state, reward, done
 
     def reset(self):
         self.state = self.start

@@ -74,13 +74,10 @@ def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode)
         steps = 0
 
         Q = main_dqn.predict(range(16))
-        log_Q(Q, episode, env, logger)
         while not done:
             action = select(episode, state, action_spec)
             actual_action, new_state, reward, done = env.step(action)
 
-            if done and reward != 1:
-                reward = -1
             reward_sum += reward
 
             replay_memory.append((state, action, reward, new_state, done))
@@ -94,6 +91,8 @@ def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode)
             steps += 1
 
             action_callback(env, Q, episode, state, action, actual_action)
+
+        log_Q(Q, episode, env, logger)
 
         avg_reward = np.mean(last_100_games_rewards) if len(last_100_games_rewards) > 0 else -1
         avg_reward = (avg_reward + 1) / 2
