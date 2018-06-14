@@ -10,27 +10,36 @@ from environments.frozen_lake import FrozenLake
 from learn.q_learning import train as q_learning_train
 from learn.dqn import train as dqn_train
 
-interactive_mode = False
-
 is_paused = False
 step_once = False
 delays = [0.5, 0.2, 0.1, 0.05, 0.01]
 delay_idx = 2
 
-lake = FrozenLake(is_slippery=False)
-# lake = FrozenLake(is_slippery=True)
-
 
 def main():
-    global train
+    global train, lake
+
     train = dqn_train
-    if interactive_mode:
+    lake = FrozenLake(is_slippery=False)
+    # lake = FrozenLake(is_slippery=True)
+
+    args = parse_arguments()
+    if args.i:
         curses.wrapper(train_and_draw)
     else:
-        global history, lake
+        global history
         history = train(lake)
 
     plot_history()
+
+
+def parse_arguments():
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', help='Enable interactive mode',
+                        action='store_true')
+    return parser.parse_args()
 
 
 def plot_history():
