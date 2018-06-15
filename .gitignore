@@ -161,3 +161,5 @@ fabric.properties
 # Custom
 **/.logs/
 resources/
+.idea/markdown-navigator.xml
+.idea/markdown-navigator/profiles_settings.xml
