@@ -7,12 +7,13 @@ I used my own implementation of FrozenLake environment(env.py) without using Ope
 The project currently supports two options: interactive mode and learning methods.
 ```
 # python main.py -h
-usage: main.py [-h] [-i] [--method {q,dqn}]
+usage: main.py [-h] [-i] [--env_mode {d,s}] [--train {q,dqn}]
 
 optional arguments:
   -h, --help        show this help message and exit
   -i                Enable interactive mode
-  --method {q,dqn}  Mode
+  --env_mode {d,s}  Whether the environment is stochastic or deterministic
+  --train {q,dqn}   Training method
 ```
 
 Interactive mode shows you what's going on inside the training session.

@@ -24,11 +24,10 @@ def main():
     args = parse_arguments()
 
     global train, lake
-    train = training_methods[args.method]
-    lake = FrozenLake(is_slippery=False)
-    # lake = FrozenLake(is_slippery=True)
+    train = training_methods[args.train_method]
+    lake = FrozenLake(is_slippery=args.env_mode is 's')
 
-    if args.method == 'dqn':
+    if args.train_method == 'dqn':
         lake.reward_processor = lambda a, s, r, d: -1 if d and r != 1 else r
 
     if args.interactive:
@@ -46,9 +45,12 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', dest='interactive', action='store_true',
                         help='Enable interactive mode')
-    parser.add_argument('--method', action='store',
+    parser.add_argument('--env_mode', action='store',
+                        choices=['d', 's'], default='d',
+                        help='Whether the environment is stochastic or deterministic')
+    parser.add_argument('--train', dest='train_method', action='store',
                         choices=['q', 'dqn'], default='dqn',
-                        help='Mode')
+                        help='Training method')
     return parser.parse_args()
 
 
