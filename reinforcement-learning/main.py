@@ -6,7 +6,6 @@ import numpy as np
 import keyboard
 
 from environments.frozen_lake import FrozenLake
-# noinspection PyUnresolvedReferences
 from learn.q_learning import train as q_learning_train
 from learn.dqn import train as dqn_train
 
