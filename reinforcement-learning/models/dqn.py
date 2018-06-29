@@ -8,7 +8,7 @@ from models.dense_regression_net import DenseRegressionNet
 
 class DQN(DenseRegressionNet):
     def _create_loss_tensor(self) -> tf.Tensor:
-        return tf.reduce_mean(tf.square(self._y - self._rewards))
+        return tf.reduce_mean(tf.square(self._y - self._activation_out))
 
     def _get_optimizer_type(self) -> Type[tf.train.Optimizer]:
         return tf.train.AdamOptimizer

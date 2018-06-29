@@ -13,7 +13,7 @@ BATCH_SIZE = 64
 TARGET_UPDATE_FREQUENCY = 5
 
 
-def train(env, episodes=5000, action_callback=noop, ene_mode='e-greedy'):
+def train(env, episodes=50000, action_callback=noop, ene_mode='e-greedy'):
     with tf.Session() as sess:
         tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -46,12 +46,6 @@ def simulate_play(env, dqn, count=10):
         print("reward_sum: {}".format(reward_sum))
 
 
-def log_Q(Q, episode, env, logger):
-    summary = env.get_summary_lines(Q)
-    logger.log('Episode {}\n'.format(episode))
-    logger.log(summary)
-
-
 def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode):
     logger = Logger(main_dqn.log_name)
 
@@ -73,7 +67,8 @@ def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode)
         reward_sum = 0
         steps = 0
 
-        Q = main_dqn.predict(range(16))
+        # FIX: Resolve dependency
+        Q = main_dqn.predict(range(main_dqn.input_dim))
         while not done:
             action = select(episode, state, action_spec)
             actual_action, new_state, reward, done = env.step(action)
@@ -92,7 +87,8 @@ def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode)
 
             action_callback(env, Q, episode, state, action, actual_action)
 
-        log_Q(Q, episode, env, logger)
+        summary = env.get_summary_lines(Q)
+        logger.log_summary(episode, summary)
 
         avg_reward = np.mean(last_100_games_rewards) if len(last_100_games_rewards) > 0 else -1
         avg_reward = (avg_reward + 1) / 2

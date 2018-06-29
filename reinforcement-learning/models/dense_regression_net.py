@@ -4,16 +4,18 @@ from datetime import datetime
 import tensorflow as tf
 import numpy as np
 import utils.numpy_extensions as npext
+from utils.functions import identity
 
 
 class DenseRegressionNet(ABC):
     def __init__(self, session, input_dim, output_size, hidden_sizes=(16,),
-                 learning_rate=1e-3, name='main', write_tensor_log=True):
+                 learning_rate=1e-3, use_bias=True, name='main', write_tensor_log=True):
         self.session = session
         self.input_dim = input_dim
         self.output_size = output_size
         self.hidden_sizes = hidden_sizes
         self.learning_rate = learning_rate
+        self.use_bias = use_bias
         self.name = name
 
         self.log_name = datetime.now().strftime("%Y-%m-%d_%H_%M_%S")
@@ -34,7 +36,7 @@ class DenseRegressionNet(ABC):
             self.train_writer.close()
 
     def _build_graph(self):
-        with tf.variable_scope(self.name):
+        with tf.name_scope(self.name):
             self._init_input_tensors()
             self._init_network(self._states)
             self._init_optimizer_tensor()
@@ -45,24 +47,35 @@ class DenseRegressionNet(ABC):
 
     def _init_network(self, out):
         def dense(inputs, units, desc, activation=None):
-            dense_layer = tf.layers.Dense(units, activation=activation)
-            res = dense_layer.apply(inputs)
+            name = 'affine_' + desc
+            with tf.name_scope(name):
+                # TODO: Consider enabling bias
+                dense_layer = tf.layers.Dense(units, activation=activation, use_bias=self.use_bias,
+                                              kernel_initializer=self._get_weight_initializer(),
+                                              name=name)
+                dense_out = dense_layer.apply(inputs)
 
-            tf.summary.histogram('weight_' + desc, dense_layer.kernel, collections=[self.name])
-            tf.summary.histogram('bias_' + desc, dense_layer.bias, collections=[self.name])
+                tf.summary.histogram('weight_' + desc, dense_layer.kernel, collections=[self.name])
+                if self.use_bias:
+                    tf.summary.histogram('bias_' + desc, dense_layer.bias, collections=[self.name])
 
-            return res
+                return dense_out
 
         for h_idx, hidden_size in enumerate(self.hidden_sizes):
             out = dense(out, hidden_size, str(h_idx), activation=tf.nn.relu)
-        self._rewards = dense(out, self.output_size, 'last')
+        self._logit = dense(out, self.output_size, str(len(self.hidden_sizes)))
+
+        act = self.activation
+        self._activation_out = act(self._logit) if callable(act) else self._logit
 
     def _init_optimizer_tensor(self):
-        optimizer = self._get_optimizer_type()
+        with tf.name_scope('train'):
+            optimizer = self._get_optimizer_type()
 
-        self._loss_tensor = self._create_loss_tensor()
-        self.global_step = tf.Variable(0, name='global_step', trainable=False)
-        self._optimizer_tensor = optimizer(learning_rate=self.learning_rate).minimize(self._loss_tensor, global_step=self.global_step)
+            self._loss_tensor = self._create_loss_tensor()
+            self._global_step = tf.Variable(0, name='global_step', trainable=False)
+            self._optimizer_tensor = optimizer(learning_rate=self.learning_rate).minimize(
+                self._loss_tensor, global_step=self._global_step)
 
     @abstractmethod
     def _create_loss_tensor(self) -> tf.Tensor:
@@ -72,11 +85,22 @@ class DenseRegressionNet(ABC):
     def _get_optimizer_type(self) -> Type[tf.train.Optimizer]:
         pass
 
+    @property
+    def activation(self):
+        return None
+
+    # noinspection PyUnresolvedReferences,PyMethodMayBeStatic
+    def _get_weight_initializer(self):
+        return tf.contrib.layers.xavier_initializer()
+
     def _init_summaries(self):
         tf.summary.histogram('input', self._states, collections=[self.name])
-        tf.summary.histogram('rewards', self._rewards, collections=[self.name])
+        tf.summary.histogram('rewards', self._activation_out, collections=[self.name])
         tf.summary.histogram('y', self._y, collections=[self.name])
-        tf.summary.scalar('loss', self._loss_tensor, collections=[self.name])
+        # FIX: Do something
+        # l = tf.reduce_mean(tf.reduce_sum(self._loss_tensor, axis=1))
+        # tf.summary.scalar('loss', l, collections=[self.name])
+        # tf.summary.scalar('loss', self._loss_tensor, collections=[self.name])
 
     def _prepare_log_dir(self):
         if tf.gfile.Exists(self.log_dir_name):
@@ -85,15 +109,19 @@ class DenseRegressionNet(ABC):
 
     def predict(self, states):
         states = npext.one_hot(states, self.input_dim, np.float32)
-        return self.session.run(self._rewards, feed_dict={self._states: states})
+        return self.session.run(self._activation_out, feed_dict={self._states: states})
 
-    def update(self, states, probabilities):
+    def update(self, states, probabilities, feed_dict_processor=identity):
         states = npext.one_hot(states, self.input_dim, np.float32)
+        feed_dict = {self._states: states, self._y: probabilities}
+        # TODO: Check identity function works
+        feed_dict = feed_dict_processor(feed_dict)
+
+        params = [self._loss_tensor, self._optimizer_tensor, self._global_step]
         if hasattr(self, 'merged_summery') and self.merged_summery is not None:
-            summary, loss, _, step = self.session.run([self.merged_summery, self._loss_tensor, self._optimizer_tensor, self.global_step],
-                                                      feed_dict={self._states: states, self._y: probabilities})
+            params += [self.merged_summery]
+            loss, _, step, summary = self.session.run(params, feed_dict=feed_dict)
             self.train_writer.add_summary(summary, global_step=step)
         else:
-            loss, _ = self.session.run([self._loss_tensor, self._optimizer_tensor],
-                                       feed_dict={self._states: states, self._y: probabilities})
+            loss, _, _ = self.session.run(params, feed_dict=feed_dict)
         return loss
