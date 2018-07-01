@@ -61,9 +61,10 @@ class DenseRegressionNet(ABC):
 
                 return dense_out
 
-        for h_idx, hidden_size in enumerate(self.hidden_sizes):
-            out = dense(out, hidden_size, str(h_idx), activation=tf.nn.relu)
-        self._logit = dense(out, self.output_size, str(len(self.hidden_sizes)))
+        with tf.variable_scope(self.name):
+            for h_idx, hidden_size in enumerate(self.hidden_sizes):
+                out = dense(out, hidden_size, str(h_idx), activation=tf.nn.relu)
+            self._logit = dense(out, self.output_size, str(len(self.hidden_sizes)))
 
         act = self.activation
         self._activation_out = act(self._logit) if callable(act) else self._logit
