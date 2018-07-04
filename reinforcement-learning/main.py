@@ -30,6 +30,8 @@ def main():
 
     if args.train_method in ['dqn', 'pg']:
         lake.reward_processor = lambda a, s, r, d: -1 if d and r != 1 else r
+        # 1 + 1 + 1 + 1 + 1  +  1 + 1 + 1 - 1 - 1 = 6
+        lake.threshold = 0.6
     if args.train_method == 'pg':
         lake.penalty_on_going_out = True
 

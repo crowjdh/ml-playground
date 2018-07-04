@@ -53,6 +53,7 @@ class FrozenLake(object):
 
         state = self.action_position_map[action]()
         self.state = self.clamp(state)
+        self.steps += 1
 
         if self.penalty_on_going_out:
             has_went_out = self.state != state
@@ -65,10 +66,13 @@ class FrozenLake(object):
         if self.reward_processor:
             reward = self.reward_processor(action, flattened_state, reward, done)
 
+        # TODO: Consider adding maximum step count to accommodate infinite loop
+
         return action, flattened_state, reward, done
 
     def reset(self):
         self.state = self.start
+        self.steps = 0
 
         return self._get_flattened_state()
 

@@ -24,6 +24,7 @@ class PGN(DenseRegressionNet):
             log_lik_adv = log_lik * self._discounted_rewards
             return tf.reduce_mean(tf.reduce_sum(log_lik_adv, axis=1))
 
+        # TODO: Loss becomes zero when reward_sum becomes zero...
         return -tf.log(self._activation_out)
 
     def _get_optimizer_type(self) -> Type[tf.train.Optimizer]:

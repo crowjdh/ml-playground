@@ -4,6 +4,10 @@ import tensorflow as tf
 from models.policy_gradient_net import PGN
 from utils.functions import noop
 from utils.logger import Logger
+from learn.utils.progress_utils import ClearManager
+from learn.utils.environment_player import simulate_play
+
+policy_gradient_update_frequency = 30
 
 
 def train(env, episodes=50000, action_callback=noop):
@@ -25,9 +29,11 @@ def train(env, episodes=50000, action_callback=noop):
 def _train(network, env, episodes, action_callback):
     logger = Logger(network.log_name)
     history = History()
+    clear_manager = ClearManager()
 
     for episode in range(episodes):
         state = env.reset()
+        clear_manager.do_soft_reset()
         done = False
 
         Q = network.predict(range(network.input_dim))
@@ -37,6 +43,7 @@ def _train(network, env, episodes, action_callback):
 
             actual_action, new_state, reward, done = env.step(action)
             history.save(state, action, probabilities, reward)
+            clear_manager.save_reward(reward)
 
             state = new_state
 
@@ -44,16 +51,21 @@ def _train(network, env, episodes, action_callback):
 
         history.update_discounted_rewards()
 
-        # TODO: Extract into constant
-        if episode % 30 == 29:
+        if episode % policy_gradient_update_frequency == 29:
             history.pack_discounted_reward_history()
-            loss = network.perform_policy_gradient_update(history)
-            print("Episode: {:5.0f}, rewards: {:2.4f}, loss: {}".format(episode, history.reward_sum, loss))
+            network.perform_policy_gradient_update(history)
             history.reset()
 
             Q = network.predict(range(network.input_dim))
             summary = env.get_summary_lines(Q)
             logger.log_summary(episode, summary)
+
+        clear_manager.update_last_100_games_rewards()
+        clear_manager.print_progress(episode, env.steps)
+        if clear_manager.has_cleared(env):
+            clear_manager.print_cleared_message(episode)
+            simulate_play(env, network)
+            break
 
 
 def _sample(probabilities):
@@ -93,7 +105,6 @@ class History:
         self.reward_sum += reward
 
     def update_discounted_rewards(self):
-        # TODO: Extract gamma
         discounted_rewards = self._calculate_discounted_rewards()
         discounted_rewards -= np.mean(discounted_rewards)
         discounted_rewards /= (np.std(discounted_rewards) + 1e-10)

@@ -6,6 +6,8 @@ import ene
 from models.dqn import DQN
 from utils.functions import noop
 from utils.logger import Logger
+from learn.utils.progress_utils import ClearManager
+from learn.utils.environment_player import simulate_play
 
 DISCOUNT_RATE = 0.99
 REPLAY_MEMORY = 50000
@@ -31,27 +33,12 @@ def train(env, episodes=50000, action_callback=noop, ene_mode='e-greedy'):
             _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode)
 
 
-def simulate_play(env, dqn, count=10):
-    for i in range(count):
-        state = env.reset()
-        done = False
-        reward_sum = 0
-
-        while not done:
-            action = np.argmax(dqn.predict(state))
-            actual_action, new_state, reward, done = env.step(action)
-            reward_sum += reward
-            state = new_state
-
-        print("reward_sum: {}".format(reward_sum))
-
-
 def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode):
     logger = Logger(main_dqn.log_name)
+    clear_manager = ClearManager()
 
     select = ene.modes[ene_mode]
     replay_memory = deque(maxlen=50000)
-    last_100_games_rewards = deque(maxlen=100)
 
     copy_operations = target_dqn.build_copy_variables_from_operation(main_dqn)
     sess.run(copy_operations)
@@ -64,40 +51,31 @@ def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode)
     for episode in range(episodes):
         state = env.reset()
         done = False
-        reward_sum = 0
-        steps = 0
+        clear_manager.do_soft_reset()
 
-        # FIX: Resolve dependency
         Q = main_dqn.predict(range(main_dqn.input_dim))
         while not done:
             action = select(episode, state, action_spec)
             actual_action, new_state, reward, done = env.step(action)
 
-            reward_sum += reward
-
+            clear_manager.save_reward(reward)
             replay_memory.append((state, action, reward, new_state, done))
 
             if len(replay_memory) > BATCH_SIZE:
                 DQN.replay_train(main_dqn, target_dqn, replay_memory, DISCOUNT_RATE, minibatch_size=BATCH_SIZE)
-            if steps % TARGET_UPDATE_FREQUENCY == 0:
+            if env.steps % TARGET_UPDATE_FREQUENCY == 0:
                 sess.run(copy_operations)
 
             state = new_state
-            steps += 1
 
             action_callback(env, Q, episode, state, action, actual_action)
 
         summary = env.get_summary_lines(Q)
         logger.log_summary(episode, summary)
 
-        avg_reward = np.mean(last_100_games_rewards) if len(last_100_games_rewards) > 0 else -1
-        avg_reward = (avg_reward + 1) / 2
-        print("Episode: {:5.0f}, steps: {:5.0f}, rewards: {:2.0f}, avg_reward:{:6.2f}"
-              .format(episode, steps, reward_sum, avg_reward))
-        last_100_games_rewards.append(reward_sum)
-
-        if len(last_100_games_rewards) == last_100_games_rewards.maxlen:
-            if avg_reward > env.threshold:
-                print(f"Game Cleared in {episode} episodes with avg reward {avg_reward}")
-                simulate_play(env, main_dqn)
-                break
+        clear_manager.update_last_100_games_rewards()
+        clear_manager.print_progress(episode, env.steps)
+        if clear_manager.has_cleared(env):
+            clear_manager.print_cleared_message(episode)
+            simulate_play(env, main_dqn)
+            break
