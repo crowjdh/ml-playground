@@ -98,10 +98,6 @@ class DenseRegressionNet(ABC):
         tf.summary.histogram('input', self._states, collections=[self.name])
         tf.summary.histogram('rewards', self._activation_out, collections=[self.name])
         tf.summary.histogram('y', self._y, collections=[self.name])
-        # FIX: Do something
-        # l = tf.reduce_mean(tf.reduce_sum(self._loss_tensor, axis=1))
-        # tf.summary.scalar('loss', l, collections=[self.name])
-        # tf.summary.scalar('loss', self._loss_tensor, collections=[self.name])
 
     def _prepare_log_dir(self):
         if tf.gfile.Exists(self.log_dir_name):

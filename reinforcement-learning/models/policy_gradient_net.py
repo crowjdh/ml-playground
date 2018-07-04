@@ -5,13 +5,30 @@ import numpy as np
 from models.dense_regression_net import DenseRegressionNet
 
 
+'''
+This model is based on Andrej Karpathy's implementation of policy gradient on Pong, converted into Tensorflow.
+
+Source code and detailed explanation can be found here:
+- Source code: https://gist.github.com/karpathy/a4166c7fe253700972fcbc77e4ea32c5
+- Explanation: http://karpathy.github.io/2016/05/31/rl/
+'''
+
+
 class PGN(DenseRegressionNet):
-    # Alternative method from:
-    #   https://github.com/hunkim/ReinforcementZeroToAll/blob/master/09_2_cross_entropy.py
+    """
+    Alternative method is from Sung Kim's implementation of policy gradient on CartPole, which can be found here:
+    - https://github.com/hunkim/ReinforcementZeroToAll/blob/master/09_2_cross_entropy.py
+    """
     # TODO: Consider subclassing for alternative method
     def __init__(self, *args, use_alternative_optimizer_method=False, **kwargs):
         self.use_alternative_optimizer_method = use_alternative_optimizer_method
         super(PGN, self).__init__(*args, **kwargs)
+
+    # TODO: Loss makes no sense
+    def _init_summaries(self):
+        super(PGN, self)._init_summaries()
+        loss = tf.reduce_mean(tf.reduce_sum(self._loss_tensor, axis=1))
+        tf.summary.scalar('loss', loss, collections=[self.name])
 
     @property
     def activation(self):

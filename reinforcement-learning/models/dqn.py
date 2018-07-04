@@ -7,6 +7,10 @@ from models.dense_regression_net import DenseRegressionNet
 
 
 class DQN(DenseRegressionNet):
+    def _init_summaries(self):
+        super(DQN, self)._init_summaries()
+        tf.summary.scalar('loss', self._loss_tensor, collections=[self.name])
+
     def _create_loss_tensor(self) -> tf.Tensor:
         return tf.reduce_mean(tf.square(self._y - self._activation_out))
 
