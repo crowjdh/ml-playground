@@ -8,6 +8,7 @@ from learn.utils.progress_utils import ClearManager
 from learn.utils.environment_player import simulate_play
 
 policy_gradient_update_frequency = 30
+epsilon = 1e-10  # For numeric stability
 
 
 def train(env, episodes=50000, action_callback=noop):
@@ -73,17 +74,17 @@ def _sample(probabilities):
     #
     # probabilities             : [0.3, 0.2, 0.4, 0.1]
     # cumulative_probabilities  : [0.3, 0.5, 0.9, 1.0]
-    # coin                      : 0.6
+    # probe                      : 0.6
     #
     # =>
-    # coin:                                 0.6
-    # cumulative_probabilities: [0.3, 0.5,       0.9, 1.0]
+    # probe                           :               0.6
+    # cumulative_probabilities        : [0.3,   0.5,       0.9,  1.0]
+    # cumulative_probabilities > probe: [False, False,     True, True]
     #
-    # cumulative_probabilities > coin: [False, False, True, True]
-    # (cumulative_probabilities > coin).argmax(): 2(index of first occurring True)
+    # (cumulative_probabilities > probe).argmax(): 2(index of first occurring True)
     cumulative_probabilities = np.cumsum(probabilities)
-    coin = np.random.rand()
-    return (cumulative_probabilities > coin).argmax()
+    probe = np.random.rand()
+    return (cumulative_probabilities > probe).argmax()
 
 
 class History:
@@ -105,9 +106,14 @@ class History:
         self.reward_sum += reward
 
     def update_discounted_rewards(self):
+        # self.rewards                      : [    0,       0,       0,        0,        0,       -1]
+        #
+        # Unnormalized discounted_rewards(α): [-0.951, -0.961,  -0.970,   -0.980,   -0.990,   -1.000]
+        # α - mean(α)                       : [0.0240,  0.015,   0.005,   -0.005,   -0.015,   -0.025]
+        # (α - mean(α)) / std(α)            : [1.4540,  0.880,   0.301,   -0.285,   -0.876,   -1.474]
         discounted_rewards = self._calculate_discounted_rewards()
         discounted_rewards -= np.mean(discounted_rewards)
-        discounted_rewards /= (np.std(discounted_rewards) + 1e-10)
+        discounted_rewards /= (np.std(discounted_rewards) + epsilon)
         self.discounted_reward_history.append(discounted_rewards)
 
         self.rewards = []
