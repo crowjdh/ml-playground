@@ -1,11 +1,14 @@
 import numpy as np
 import tensorflow as tf
 
-from models.policy_gradient_net import PGN
 from utils.functions import noop
 from utils.logger import Logger
 from learn.utils.progress_utils import ClearManager
 from learn.utils.environment_player import simulate_play
+
+# Toggle comment on 2 lines below to use alternative strategy
+from models.policy_gradient_net import PGN
+# from models.policy_gradient_net_alternative import PGNAlternative as PGN
 
 policy_gradient_update_frequency = 30
 epsilon = 1e-10  # For numeric stability
