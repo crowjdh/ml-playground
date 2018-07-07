@@ -55,7 +55,7 @@ def _train(network, env, episodes, action_callback):
 
         history.update_discounted_rewards()
 
-        if episode % policy_gradient_update_frequency == 29:
+        if episode % policy_gradient_update_frequency == policy_gradient_update_frequency - 1:
             history.pack_discounted_reward_history()
             network.perform_policy_gradient_update(history)
             history.reset()
@@ -93,36 +93,36 @@ def _sample(probabilities):
 class History:
     def __init__(self, discount_rate=0.99):
         self.reset()
-        self.state_history = []
-        self.action_history = []
-        self.probabilities_history = []
-        self.discounted_reward_history = []
+        self.state = []
+        self.action = []
+        self.probabilities = []
+        self.discounted_reward = []
         self.rewards = []
         self.reward_sum = 0
         self.discount_rate = discount_rate
 
     def save(self, state, action, probabilities, reward):
-        self.state_history.append(state)
-        self.action_history.append(action)
-        self.probabilities_history.append(probabilities)
+        self.state.append(state)
+        self.action.append(action)
+        self.probabilities.append(probabilities)
         self.rewards.append(reward)
         self.reward_sum += reward
 
     def update_discounted_rewards(self):
-        # self.rewards                      : [    0,       0,       0,        0,        0,       -1]
+        # self.rewards                      : [     0,      0,       0,        0,        0,       -1]
         #
         # Unnormalized discounted_rewards(α): [-0.951, -0.961,  -0.970,   -0.980,   -0.990,   -1.000]
-        # α - mean(α)                       : [0.0240,  0.015,   0.005,   -0.005,   -0.015,   -0.025]
-        # (α - mean(α)) / std(α)            : [1.4540,  0.880,   0.301,   -0.285,   -0.876,   -1.474]
+        # α - mean(α)                       : [ 0.024,  0.015,   0.005,   -0.005,   -0.015,   -0.025]
+        # (α - mean(α)) / std(α)            : [ 1.454,  0.880,   0.301,   -0.285,   -0.876,   -1.474]
         discounted_rewards = self._calculate_discounted_rewards()
         discounted_rewards -= np.mean(discounted_rewards)
         discounted_rewards /= (np.std(discounted_rewards) + epsilon)
-        self.discounted_reward_history.append(discounted_rewards)
+        self.discounted_reward.append(discounted_rewards)
 
         self.rewards = []
 
     def pack_discounted_reward_history(self):
-        self.discounted_reward_history = np.concatenate(self.discounted_reward_history)[:, np.newaxis]
+        self.discounted_reward = np.concatenate(self.discounted_reward)[:, np.newaxis]
 
     def _calculate_discounted_rewards(self):
         discounted_rewards = np.zeros_like(self.rewards, dtype=np.float)
@@ -134,9 +134,9 @@ class History:
         return discounted_rewards
 
     def reset(self):
-        self.state_history = []
-        self.action_history = []
-        self.probabilities_history = []
-        self.discounted_reward_history = []
+        self.state = []
+        self.action = []
+        self.probabilities = []
+        self.discounted_reward = []
         self.rewards = []
         self.reward_sum = 0
