@@ -6,9 +6,9 @@ import numpy as np
 import keyboard
 
 from environments.frozen_lake import FrozenLake
-# noinspection PyUnresolvedReferences
 from learn.q_learning import train as q_learning_train
 from learn.dqn import train as dqn_train
+from learn.policy_gradient import train as pg_train
 
 is_paused = False
 step_once = False
@@ -16,7 +16,8 @@ delays = [0.5, 0.2, 0.1, 0.05, 0.01]
 delay_idx = 2
 training_methods = {
     'q': q_learning_train,
-    'dqn': dqn_train
+    'dqn': dqn_train,
+    'pg': pg_train,
 }
 
 
@@ -27,8 +28,12 @@ def main():
     train = training_methods[args.train_method]
     lake = FrozenLake(is_slippery=args.env_mode is 's')
 
-    if args.train_method == 'dqn':
+    if args.train_method in ['dqn', 'pg']:
         lake.reward_processor = lambda a, s, r, d: -1 if d and r != 1 else r
+        # 1 + 1 + 1 + 1 + 1  +  1 + 1 + 1 - 1 - 1 = 6
+        lake.threshold = 0.6
+    if args.train_method == 'pg':
+        lake.penalty_on_going_out = True
 
     if args.interactive:
         curses.wrapper(train_and_draw)
@@ -49,7 +54,7 @@ def parse_arguments():
                         choices=['d', 's'], default='d',
                         help='Whether the environment is stochastic or deterministic')
     parser.add_argument('--train', dest='train_method', action='store',
-                        choices=['q', 'dqn'], default='dqn',
+                        choices=['q', 'dqn', 'pg'], default='dqn',
                         help='Training method')
     return parser.parse_args()
 

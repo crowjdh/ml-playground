@@ -4,7 +4,7 @@ from collections import Iterable
 
 # noinspection PyAttributeOutsideInit
 class FrozenLake(object):
-    def __init__(self, is_slippery=True, threshold=.8):
+    def __init__(self, is_slippery=True, threshold=.8, penalty_on_going_out=False):
         self.pitfalls = [(e[0], e[1]) for e in np.array([[1, 1, 2, 3], [1, 3, 3, 0]]).T]
         self.goal = 3, 3
 
@@ -13,6 +13,7 @@ class FrozenLake(object):
         self.lake[self.goal] = 1
         self.is_slippery = is_slippery
         self.threshold = threshold
+        self.penalty_on_going_out = penalty_on_going_out
 
         self.start = 0, 0
         self.reset()
@@ -52,18 +53,26 @@ class FrozenLake(object):
 
         state = self.action_position_map[action]()
         self.state = self.clamp(state)
+        self.steps += 1
 
-        done = self.state == self.goal or self.state in self.pitfalls
-        reward = self.lake[self.state]
+        if self.penalty_on_going_out:
+            has_went_out = self.state != state
+        else:
+            has_went_out = False
+        done = has_went_out or self.state == self.goal or self.state in self.pitfalls
+        reward = -1 if has_went_out else self.lake[self.state]
 
         flattened_state = self._get_flattened_state()
         if self.reward_processor:
             reward = self.reward_processor(action, flattened_state, reward, done)
 
+        # TODO: Consider adding maximum step count to accommodate infinite loop
+
         return action, flattened_state, reward, done
 
     def reset(self):
         self.state = self.start
+        self.steps = 0
 
         return self._get_flattened_state()
 
