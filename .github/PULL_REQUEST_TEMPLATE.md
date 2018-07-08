@@ -1,7 +1,7 @@
-Fixes #
+Implements/Fixes #
 
 ## Proposed Changes ##
 
-  -
-  -
-  -
+  - 
+  - 
+  - 
