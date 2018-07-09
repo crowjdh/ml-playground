@@ -49,7 +49,6 @@ class DenseRegressionNet(ABC):
         def dense(inputs, units, desc, activation=None):
             name = 'affine_' + desc
             with tf.name_scope(name):
-                # TODO: Consider enabling bias
                 dense_layer = tf.layers.Dense(units, activation=activation, use_bias=self.use_bias,
                                               kernel_initializer=self._get_weight_initializer(),
                                               name=name)
