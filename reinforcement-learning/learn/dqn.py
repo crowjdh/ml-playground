@@ -24,9 +24,10 @@ def train(env, episodes=50000, action_callback=noop, ene_mode='e-greedy'):
 
         # target_dqn is slightly behind main_dqn(therefore, target_dqn has slightly old parameters),
         # so that training is done on stationary target.
-        main_dqn = DQN(sess, input_dim, output_dim, hidden_sizes=[32, 16], learning_rate=1e-3, name='main')
-        target_dqn = DQN(sess, input_dim, output_dim, hidden_sizes=[32, 16], learning_rate=1e-3, name='target',
-                         write_tensor_log=False)
+        main_dqn = DQN(sess, input_dim, output_dim, hidden_sizes=[32, 16],
+                       learning_rate=1e-3, name='main', log_name_postfix='s' if env.is_slippery else 'd')
+        target_dqn = DQN(sess, input_dim, output_dim, hidden_sizes=[32, 16],
+                         learning_rate=1e-3, name='target', write_tensor_log=False)
         tf.global_variables_initializer().run()
 
         with main_dqn, target_dqn:
@@ -34,7 +35,7 @@ def train(env, episodes=50000, action_callback=noop, ene_mode='e-greedy'):
 
 
 def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode):
-    logger = Logger(main_dqn.log_name)
+    logger = Logger(main_dqn.log_dir_name)
     clear_manager = ClearManager()
 
     select = ene.modes[ene_mode]

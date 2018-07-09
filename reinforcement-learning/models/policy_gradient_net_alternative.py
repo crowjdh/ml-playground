@@ -11,6 +11,10 @@ Alternative method is from Sung Kim's implementation of policy gradient on CartP
 
 
 class PGNAlternative(PGN):
+    @property
+    def log_name(self):
+        return 'PGNAlternative'
+
     # TODO: Loss makes no sense
     def _init_summaries(self):
         super(PGN, self)._init_summaries()

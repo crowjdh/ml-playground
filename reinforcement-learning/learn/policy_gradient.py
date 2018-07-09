@@ -21,7 +21,8 @@ def train(env, episodes=50000, action_callback=noop):
         input_dim = np.prod(env.state_shape)
         output_dim = env.action_size
         # Using bias on pg seems to make model to converge slower.
-        network = PGN(sess, input_dim, output_dim, (128,), learning_rate=1e-2, use_bias=False, name='pgn')
+        network = PGN(sess, input_dim, output_dim, (128,),
+                      learning_rate=1e-2, use_bias=False, name='pgn', log_name_postfix='s' if env.is_slippery else 'd')
         tf.global_variables_initializer().run()
 
         with network:
@@ -31,7 +32,7 @@ def train(env, episodes=50000, action_callback=noop):
 
 
 def _train(network, env, episodes, action_callback):
-    logger = Logger(network.log_name)
+    logger = Logger(network.log_dir_name)
     history = History()
     clear_manager = ClearManager()
 

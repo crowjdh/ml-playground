@@ -9,7 +9,7 @@ from utils.functions import identity
 
 class DenseRegressionNet(ABC):
     def __init__(self, session, input_dim, output_size, hidden_sizes=(16,),
-                 learning_rate=1e-3, use_bias=True, name='main', write_tensor_log=True):
+                 learning_rate=1e-3, use_bias=True, name='main', write_tensor_log=True, log_name_postfix=''):
         self.session = session
         self.input_dim = input_dim
         self.output_size = output_size
@@ -18,8 +18,7 @@ class DenseRegressionNet(ABC):
         self.use_bias = use_bias
         self.name = name
 
-        self.log_name = datetime.now().strftime("%Y-%m-%d_%H_%M_%S")
-        self.log_dir_name = '.logs/{}'.format(self.log_name)
+        self.log_name_postfix = log_name_postfix
         self.write_tensor_log = write_tensor_log
 
         self._build_graph()
@@ -88,6 +87,15 @@ class DenseRegressionNet(ABC):
     @property
     def activation(self):
         return None
+
+    @property
+    @abstractmethod
+    def log_name(self):
+        pass
+
+    @property
+    def log_dir_name(self):
+        return '.logs/{}_{}'.format(self.log_name, self.log_name_postfix)
 
     # noinspection PyUnresolvedReferences,PyMethodMayBeStatic
     def _get_weight_initializer(self):

@@ -1,9 +1,12 @@
+import os
 from collections import Iterable
 
 
 class Logger:
     def __init__(self, name):
-        self.name = '.logs/{}.txt'.format(name)
+        self.name = '{}.txt'.format(name)
+        if os.path.isfile(self.name):
+            os.remove(self.name)
 
     def log(self, lines):
         if isinstance(lines, str) or not isinstance(lines, Iterable):

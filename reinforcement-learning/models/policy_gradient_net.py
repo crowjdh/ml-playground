@@ -16,6 +16,10 @@ Source code and detailed explanation can be found here:
 
 
 class PGN(DenseRegressionNet):
+    @property
+    def log_name(self):
+        return 'PGN'
+
     # TODO: Loss makes no sense
     def _init_summaries(self):
         super(PGN, self)._init_summaries()

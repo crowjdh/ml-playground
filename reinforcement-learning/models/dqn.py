@@ -7,6 +7,10 @@ from models.dense_regression_net import DenseRegressionNet
 
 
 class DQN(DenseRegressionNet):
+    @property
+    def log_name(self):
+        return 'DQN'
+
     def _init_summaries(self):
         super(DQN, self)._init_summaries()
         tf.summary.scalar('loss', self._loss_tensor, collections=[self.name])
