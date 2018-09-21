@@ -52,7 +52,7 @@ class FrozenLake(object):
             action = np.random.choice(action_candidates)
 
         state = self.action_position_map[action]()
-        self.state = self.clamp(state)
+        self.state = self._clamp(state)
         self.steps += 1
 
         if self.penalty_on_going_out:
@@ -82,7 +82,7 @@ class FrozenLake(object):
 
         return self.state
 
-    def clamp(self, position):
+    def _clamp(self, position):
         new_y = max(min(position[0], self.state_shape[0] - 1), 0)
         new_x = max(min(position[1], self.state_shape[1] - 1), 0)
 
