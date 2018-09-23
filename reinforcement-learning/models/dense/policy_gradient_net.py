@@ -2,7 +2,7 @@ from typing import Type
 import tensorflow as tf
 import numpy as np
 
-from models.dense_regression_net import DenseRegressionNet
+from models.dense.dense_regression_net import DenseRegressionNet
 
 
 '''

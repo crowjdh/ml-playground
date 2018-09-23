@@ -3,7 +3,7 @@ import tensorflow as tf
 from collections import deque
 
 import ene
-from models.dqn import DQN
+from models.dense.dqn import DQN
 from utils.functions import noop
 from utils.logger import Logger
 from learn.utils.progress_utils import ClearManager

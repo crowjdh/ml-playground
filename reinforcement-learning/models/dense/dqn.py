@@ -3,7 +3,7 @@ import tensorflow as tf
 import numpy as np
 import random
 
-from models.dense_regression_net import DenseRegressionNet
+from models.dense.dense_regression_net import DenseRegressionNet
 
 
 class DQN(DenseRegressionNet):

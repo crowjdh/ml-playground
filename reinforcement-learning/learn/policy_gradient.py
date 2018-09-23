@@ -7,7 +7,7 @@ from learn.utils.progress_utils import ClearManager
 from learn.utils.environment_player import simulate_play
 
 # Toggle comment on 2 lines below to use alternative strategy
-from models.policy_gradient_net import PGN
+from models.dense.policy_gradient_net import PGN
 # from models.policy_gradient_net_alternative import PGNAlternative as PGN
 
 policy_gradient_update_frequency = 30

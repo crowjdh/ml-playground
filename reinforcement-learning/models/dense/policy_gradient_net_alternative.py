@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 
-from models.policy_gradient_net import PGN
+from models.dense.policy_gradient_net import PGN
 
 
 '''
