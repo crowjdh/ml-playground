@@ -1,18 +1,18 @@
 import numpy as np
 from collections import Iterable
 
+from environments.environment import Environment
 
-# noinspection PyAttributeOutsideInit
-class FrozenLake(object):
-    def __init__(self, is_slippery=True, threshold=.8, penalty_on_going_out=False):
+
+class FrozenLake(Environment):
+    def __init__(self, is_stochastic=True, threshold=.8, penalty_on_going_out=False):
+        super().__init__(threshold, is_stochastic=is_stochastic)
         self.pitfalls = [(e[0], e[1]) for e in np.array([[1, 1, 2, 3], [1, 3, 3, 0]]).T]
         self.goal = 3, 3
 
         self.state_shape = (4, 4)
         self.lake = np.zeros(self.state_shape, dtype=np.int8)
         self.lake[self.goal] = 1
-        self.is_slippery = is_slippery
-        self.threshold = threshold
         self.penalty_on_going_out = penalty_on_going_out
 
         self.start = 0, 0
@@ -25,10 +25,9 @@ class FrozenLake(object):
             lambda: (self.state[0], self.state[1] - 1)
         ]
         self.action_size = len(self.action_position_map)
-        self.reward_processor = None
 
     def step(self, action):
-        if self.is_slippery:
+        if self.is_stochastic:
             # When lake is slippery, you might end up moving into
             # one of 3 possible states(with uniform distribution), which is:
             # 1. Desired action
@@ -62,7 +61,7 @@ class FrozenLake(object):
         done = has_went_out or self.state == self.goal or self.state in self.pitfalls
         reward = -1 if has_went_out else self.lake[self.state]
 
-        flattened_state = self._get_flattened_state()
+        flattened_state = self.flattened_state
         if self.reward_processor:
             reward = self.reward_processor(action, flattened_state, reward, done)
 
@@ -74,13 +73,7 @@ class FrozenLake(object):
         self.state = self.start
         self.steps = 0
 
-        return self._get_flattened_state()
-
-    def random_reset(self):
-        state = np.random.choice(np.prod(self.state_shape))
-        self.state = self.unflatten_state(state)
-
-        return self.state
+        return self.flattened_state
 
     def _clamp(self, position):
         new_y = max(min(position[0], self.state_shape[0] - 1), 0)
@@ -88,11 +81,21 @@ class FrozenLake(object):
 
         return new_y, new_x
 
-    def _get_flattened_state(self):
-        return self.state[0] * 4 + self.state[1]
+    def flatten_state(self, unflattened_state):
+        return unflattened_state[0] * 4 + unflattened_state[1]
 
     def unflatten_state(self, flattened_state):
         return flattened_state // self.state_shape[0], flattened_state % self.state_shape[1]
+
+    def flatten_action(self, unflattened_action):
+        return unflattened_action
+
+    def unflatten_action(self, flattened_action):
+        return flattened_action
+
+    @property
+    def flattened_state(self):
+        return self.flatten_state(self.state)
 
     def get_summary_lines(self, Q):
         from functools import reduce

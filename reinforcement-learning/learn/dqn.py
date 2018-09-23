@@ -25,7 +25,7 @@ def train(env, episodes=50000, action_callback=noop, ene_mode='e-greedy'):
         # target_dqn is slightly behind main_dqn(therefore, target_dqn has slightly old parameters),
         # so that training is done on stationary target.
         main_dqn = DQN(sess, input_dim, output_dim, hidden_sizes=[32, 16],
-                       learning_rate=1e-3, name='main', log_name_postfix='s' if env.is_slippery else 'd')
+                       learning_rate=1e-3, name='main', log_name_postfix='s' if env.is_stochastic else 'd')
         target_dqn = DQN(sess, input_dim, output_dim, hidden_sizes=[32, 16],
                          learning_rate=1e-3, name='target', write_tensor_log=False)
         tf.global_variables_initializer().run()

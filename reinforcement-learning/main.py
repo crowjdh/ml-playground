@@ -26,7 +26,7 @@ def main():
 
     global train, lake
     train = training_methods[args.train_method]
-    lake = FrozenLake(is_slippery=args.env_mode is 's')
+    lake = FrozenLake(is_stochastic=args.env_mode is 's')
 
     if args.train_method in ['dqn', 'pg']:
         lake.reward_processor = lambda a, s, r, d: -1 if d and r != 1 else r
