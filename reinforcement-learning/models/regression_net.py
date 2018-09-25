@@ -42,6 +42,24 @@ class RegressionNet(ABC):
     def _create_network(self, out) -> Tuple[tf.Tensor, tf.Tensor]:
         pass
 
+    def dense(self, inputs, units, desc, activation=None):
+        name = 'affine_' + desc
+        with tf.name_scope(name):
+            dense_layer = tf.layers.Dense(units, activation=activation, use_bias=self.use_bias,
+                                          kernel_initializer=self._get_weight_initializer(),
+                                          name=name)
+            dense_out = dense_layer.apply(inputs)
+
+            tf.summary.histogram('weight_' + desc, dense_layer.kernel, collections=[self.name])
+            if self.use_bias:
+                tf.summary.histogram('bias_' + desc, dense_layer.bias, collections=[self.name])
+
+            return dense_out
+
+    # noinspection PyMethodMayBeStatic
+    def _process_input(self, value):
+        return value
+
     def _init_optimizer_tensor(self):
         with tf.name_scope('train'):
             optimizer = self._get_optimizer_type()
@@ -87,9 +105,13 @@ class RegressionNet(ABC):
         tf.gfile.MakeDirs(self.log_dir_name)
 
     def predict(self, states):
+        states = self._process_input(states)
+
         return self.session.run(self._activation_out, feed_dict={self._states: states})
 
     def update(self, states, probabilities, feed_dict_processor=identity):
+        states = self._process_input(states)
+
         feed_dict = {self._states: states, self._y: probabilities}
         # TODO: Check identity function works
         feed_dict = feed_dict_processor(feed_dict)
