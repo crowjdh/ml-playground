@@ -8,7 +8,7 @@ from pygame.locals import *
 import numpy as np
 
 # noinspection PyUnresolvedReferences
-SCREEN_RECT = Rect(0, 0, 120, 120)
+SCREEN_RECT = Rect(0, 0, 80, 80)
 
 
 # noinspection PyUnresolvedReferences
@@ -25,11 +25,12 @@ def should_quit(event=None):
 # noinspection PyUnresolvedReferences
 class RMO(pygame.sprite.Sprite):
     speed_limit = 5
+    normal_speed = [3, 3]
     rand_speed_candidates = list(range(-4, -1)) + list(range(1, 4))
     size = (10, 10)
     update_freq = 12
 
-    def __init__(self, color, initial_position=None):
+    def __init__(self, color, initial_position=None, randomly_change_direction=False):
         pygame.sprite.Sprite.__init__(self, self.containers)
         self.image = pygame.Surface(RMO.size)
         self.image.fill(color)
@@ -39,7 +40,8 @@ class RMO(pygame.sprite.Sprite):
         else:
             self.initial_position = (random.randint(third, 2 * third), random.randint(third, 2 * third))
         self.reset_rect()
-        self.speed = self.make_random_speed()
+        self.speed = self.make_random_speed() if randomly_change_direction else list(RMO.normal_speed)
+        self.randomly_change_direction = randomly_change_direction
         self.frame_since_last_speed_update = 0
 
     def reset_rect(self):
@@ -67,7 +69,7 @@ class RMO(pygame.sprite.Sprite):
                 self.speed[1] *= -1
             target_rect = self.rect.move(*self.speed)
             self.frame_since_last_speed_update = 0
-        elif self.should_update_speed:
+        elif self.randomly_change_direction and self.should_update_speed:
             self.speed = RMO.make_random_speed()
             self.frame_since_last_speed_update = 0
         self.rect = target_rect
@@ -88,13 +90,13 @@ class RMO(pygame.sprite.Sprite):
 
 
 class Zombie(RMO):
-    def __init__(self, initial_position=None):
-        RMO.__init__(self, (255, 127, 127), initial_position=initial_position)
+    def __init__(self, **kwargs):
+        RMO.__init__(self, (255, 127, 127), **kwargs)
 
 
 class Player(RMO):
-    def __init__(self, initial_position=None):
-        RMO.__init__(self, (0, 0, 0), initial_position=initial_position)
+    def __init__(self, **kwargs):
+        RMO.__init__(self, (0, 0, 0), **kwargs)
 
     def update(self):
         pass
@@ -106,8 +108,12 @@ class Player(RMO):
 
 # noinspection PyUnresolvedReferences
 class Dodge:
-    def __init__(self, queue=None):
+    bg_color = (255, 255, 255)
+    font_color = (255, 0, 0)
+
+    def __init__(self, queue=None, move_zombies_randomly=False, show_additional_information=False):
         self.queue = queue
+        self.show_additional_information = show_additional_information
 
         pygame.init()
 
@@ -118,6 +124,14 @@ class Dodge:
         self.zombies = pygame.sprite.Group()
         self.render_updates = pygame.sprite.RenderUpdates()
 
+        self.font = pygame.font.SysFont(None, 20)
+        self.ticks_area = self.font.render("9999", True, Dodge.font_color, Dodge.bg_color).get_rect()
+        self.tries_area = self.font.render("999", True, Dodge.font_color, Dodge.bg_color).get_rect()
+        self.tries_area.top = self.ticks_area.bottom
+
+        self.ticks = 0
+        self.tries = 0
+
         Player.containers = self.render_updates
         Zombie.containers = self.zombies, self.render_updates
 
@@ -126,8 +140,11 @@ class Dodge:
         self.screen.blit(self.background, (0, 0))
         pygame.display.flip()
 
-        self.player = Player(initial_position=(int(SCREEN_RECT.width / 3) * 2, SCREEN_RECT.center[1]))
-        Zombie(initial_position=(int(SCREEN_RECT.width / 3), SCREEN_RECT.center[1]))
+        self.player = Player(initial_position=(int(SCREEN_RECT.width / 4) * 2, SCREEN_RECT.center[1]))
+        Zombie(initial_position=(int(SCREEN_RECT.width / 4), SCREEN_RECT.center[1]),
+               randomly_change_direction=move_zombies_randomly)
+        Zombie(initial_position=(int(SCREEN_RECT.width / 4) * 3, SCREEN_RECT.center[1]),
+               randomly_change_direction=move_zombies_randomly)
 
         self.clock = pygame.time.Clock()
 
@@ -149,7 +166,9 @@ class Dodge:
                 dy = keystate[K_DOWN] - keystate[K_UP]
                 # dx = 1
                 # dy = 1
-            self.tick(dx, dy)
+            collided_zombies = self.tick(dx, dy)
+            if len(collided_zombies) > 0:
+                self.reset_game()
 
         pygame.quit()
 
@@ -160,9 +179,24 @@ class Dodge:
         self.render_updates.clear(self.screen, self.background)
         self.render_updates.update()
 
-        collided_zombies = pygame.sprite.spritecollide(self.player, self.zombies, dokill=False)
+        self.ticks += 1
 
         dirty = self.render_updates.draw(self.screen)
+
+        if self.show_additional_information:
+            ticks = self.font.render(str(self.ticks), True, Dodge.font_color, Dodge.bg_color)
+            self.screen.fill(Dodge.bg_color, rect=self.ticks_area)
+            self.screen.blit(ticks, self.ticks_area)
+
+            tries = self.font.render(str(self.tries), True, Dodge.font_color, Dodge.bg_color)
+            self.screen.fill(Dodge.bg_color, rect=self.tries_area)
+            self.screen.blit(tries, self.tries_area)
+
+            dirty.append(self.ticks_area)
+            dirty.append(self.tries_area)
+
+        collided_zombies = pygame.sprite.spritecollide(self.player, self.zombies, dokill=False)
+
         pygame.display.update(dirty)
 
         self.clock.tick(40)
@@ -170,6 +204,8 @@ class Dodge:
         return collided_zombies
 
     def reset_game(self):
+        self.ticks = 0
+        self.tries += 1
         self.player.reset_rect()
         for zombie in self.zombies.sprites():
             zombie.reset_rect()
@@ -185,10 +221,11 @@ def get_grayscale_frame():
     frame = 0.21 * frame[:, :, 0] + 0.72 * frame[:, :, 1] + 0.07 * frame[:, :, 2]
     frame = np.round(frame).astype(np.uint8)
 
-    # img = Image.fromarray(frame, 'L')
-    # img.save('frame.png')
-
     return frame
+
+
+def ensure_draw():
+    pygame.event.get()
 
 
 def dummy_user(queue, dodge):
@@ -218,6 +255,11 @@ def run_on_thread():
     dodge.start()
 
 
+def play():
+    Dodge().start()
+
+
 if __name__ == '__main__':
-    run()
+    # run()
     # run_on_thread()
+    play()

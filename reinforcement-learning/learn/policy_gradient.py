@@ -35,13 +35,15 @@ def _train(network, env, episodes, action_callback):
     logger = Logger(network.log_dir_name)
     history = History()
     clear_manager = ClearManager()
+    possible_states = getattr(env, 'possible_states', None)
+    predict_all = lambda: network.predict(possible_states) if possible_states else None
 
     for episode in range(episodes):
         state = env.reset()
         clear_manager.do_soft_reset()
         done = False
 
-        Q = network.predict(range(network.input_dim))
+        Q = predict_all()
         while not done:
             probabilities = network.predict(state)[0]
             action = _sample(probabilities)
@@ -61,7 +63,7 @@ def _train(network, env, episodes, action_callback):
             network.perform_policy_gradient_update(history)
             history.reset()
 
-            Q = network.predict(range(network.input_dim))
+            Q = predict_all()
             summary = env.get_summary_lines(Q)
             logger.log_summary(episode, summary)
 

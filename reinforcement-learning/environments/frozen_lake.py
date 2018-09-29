@@ -5,17 +5,20 @@ from environments.environment import Environment
 
 
 class FrozenLake(Environment):
+    size = (4, 4)
+    start = 0, 0
+    action_size = 4
+
     def __init__(self, is_stochastic=True, threshold=.8, penalty_on_going_out=False):
-        super().__init__(threshold, is_stochastic=is_stochastic)
+        super().__init__(FrozenLake.size, FrozenLake.action_size, threshold, is_stochastic=is_stochastic)
+
         self.pitfalls = [(e[0], e[1]) for e in np.array([[1, 1, 2, 3], [1, 3, 3, 0]]).T]
         self.goal = 3, 3
 
-        self.state_shape = (4, 4)
         self.lake = np.zeros(self.state_shape, dtype=np.int8)
         self.lake[self.goal] = 1
         self.penalty_on_going_out = penalty_on_going_out
 
-        self.start = 0, 0
         self.reset()
         # 0123 -> urdl
         self.action_position_map = [
@@ -24,7 +27,8 @@ class FrozenLake(Environment):
             lambda: (self.state[0] + 1, self.state[1]),
             lambda: (self.state[0], self.state[1] - 1)
         ]
-        self.action_size = len(self.action_position_map)
+
+        assert len(self.action_position_map) == FrozenLake.action_size
 
     def step(self, action):
         if self.is_stochastic:
@@ -69,8 +73,9 @@ class FrozenLake(Environment):
 
         return action, flattened_state, reward, done
 
+    # noinspection PyAttributeOutsideInit
     def reset(self):
-        self.state = self.start
+        self.state = FrozenLake.start
         self.steps = 0
 
         return self.flattened_state
@@ -96,6 +101,10 @@ class FrozenLake(Environment):
     @property
     def flattened_state(self):
         return self.flatten_state(self.state)
+
+    @property
+    def possible_states(self):
+        return range(FrozenLake.size[0] * FrozenLake.size[1])
 
     def get_summary_lines(self, Q):
         from functools import reduce

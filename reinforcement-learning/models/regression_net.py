@@ -57,8 +57,8 @@ class RegressionNet(ABC):
             return dense_out
 
     # noinspection PyMethodMayBeStatic
-    def _process_input(self, value):
-        return value
+    def _process_input(self, values):
+        return values
 
     def _init_optimizer_tensor(self):
         with tf.name_scope('train'):

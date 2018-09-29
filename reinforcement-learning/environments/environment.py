@@ -2,10 +2,16 @@ from abc import ABC, abstractmethod
 
 
 class Environment(ABC):
-    def __init__(self, threshold, is_stochastic=True):
+    dense = 'dense'
+    convolution = 'conv'
+
+    def __init__(self, state_shape, action_size, threshold, is_stochastic=True, network_mode=dense):
         self.is_stochastic = is_stochastic
         self.threshold = threshold
         self.reward_processor = None
+        self.state_shape = state_shape
+        self.action_size = action_size
+        self.network_mode = network_mode
 
     @abstractmethod
     def step(self, action) -> tuple:

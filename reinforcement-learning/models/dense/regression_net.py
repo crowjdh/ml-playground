@@ -34,8 +34,8 @@ class DenseRegressionNet(RegressionNet):
 
         return logit, activation_out
 
-    def _process_input(self, value):
-        return npext.one_hot(value, self.input_dim, np.float32)
+    def _process_input(self, values):
+        return npext.one_hot(values, self.input_dim, np.float32)
 
     @abstractmethod
     def _create_loss_tensor(self) -> tf.Tensor:

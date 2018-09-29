@@ -1,39 +1,57 @@
 from bidict import bidict
 
-from games.dodge import Dodge, get_grayscale_frame
+import numpy as np
+
+from games.dodge import Dodge, SCREEN_RECT, get_grayscale_frame, ensure_draw
 from environments.environment import Environment
+from utils.functions import *
+
+
+def disable_pygame_display():
+    import os
+    os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 
 class DodgeEnv(Dodge, Environment):
+    screen_size = (SCREEN_RECT.width, SCREEN_RECT.height)
     actions = bidict({
-        0: (0, -1),
-        1: (1, -1),
-        2: (1, 0),
-        3: (1, 1),
-        4: (0, 1),
-        5: (-1, 1),
-        6: (-1, 0),
-        7: (-1, -1)
+        0: (0, 0),
+        1: (0, -1),
+        2: (1, -1),
+        3: (1, 0),
+        4: (1, 1),
+        5: (0, 1),
+        6: (-1, 1),
+        7: (-1, 0),
+        8: (-1, -1),
     })
 
-    def __init__(self, threshold=.8):
-        Dodge.__init__(self)
-        Environment.__init__(self, threshold)
+    def __init__(self, threshold=.8, headless_mode=False, is_stochastic=True):
+        disable_pygame_display() if headless_mode else noop
+        Dodge.__init__(self, move_zombies_randomly=is_stochastic)
+        Environment.__init__(self, [1] + list(DodgeEnv.screen_size), len(DodgeEnv.actions), threshold,
+                             network_mode=Environment.convolution)
 
     def step(self, action) -> tuple:
         unflattened_action = self.unflatten_action(action)
         collided_zombies = self.tick(*unflattened_action)
+        ensure_draw()
 
-        state = get_grayscale_frame()
+        state = self.frame
         done = len(collided_zombies) > 0
         reward = 1 if not done else -100
+        self.steps += 1
 
         return action, state, reward, done
 
+    # noinspection PyAttributeOutsideInit
     def reset(self):
         self.reset_game()
 
-        return get_grayscale_frame()
+        self.state = self.frame
+        self.steps = 0
+
+        return self.state
 
     def flatten_state(self, unflattened_state):
         raise NotImplementedError
@@ -46,3 +64,7 @@ class DodgeEnv(Dodge, Environment):
 
     def unflatten_action(self, flattened_action):
         return DodgeEnv.actions[flattened_action]
+
+    @property
+    def frame(self):
+        return get_grayscale_frame()[np.newaxis]

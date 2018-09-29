@@ -5,41 +5,22 @@ import matplotlib.pyplot as plt
 import numpy as np
 import keyboard
 
-from environments.frozen_lake import FrozenLake
-from learn.q_learning import train as q_learning_train
-from learn.dqn import train as dqn_train
-from learn.policy_gradient import train as pg_train
-
 is_paused = False
 step_once = False
 delays = [0.5, 0.2, 0.1, 0.05, 0.01]
 delay_idx = 2
-training_methods = {
-    'q': q_learning_train,
-    'dqn': dqn_train,
-    'pg': pg_train,
-}
+train_options = {}
+callback_cursor = None
 
 
 def main():
     args = parse_arguments()
 
-    global train, lake
-    train = training_methods[args.train_method]
-    lake = FrozenLake(is_stochastic=args.env_mode is 's')
+    train_options['train'] = train = import_train_method(args)
+    train_options['env'] = env = create_environment(args)
 
-    if args.train_method in ['dqn', 'pg']:
-        lake.reward_processor = lambda a, s, r, d: -1 if d and r != 1 else r
-        # 1 + 1 + 1 + 1 + 1  +  1 + 1 + 1 - 1 - 1 = 6
-        lake.threshold = 0.6
-    if args.train_method == 'pg':
-        lake.penalty_on_going_out = True
-
-    if args.interactive:
-        curses.wrapper(train_and_draw)
-    else:
-        global history
-        history = train(lake)
+    preprocess_env(env, args)
+    _train(train, env, args)
 
     plot_history()
 
@@ -50,6 +31,9 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', dest='interactive', action='store_true',
                         help='Enable interactive mode')
+    parser.add_argument('--env', action='store',
+                        choices=['frozen_lake', 'dodge'], default='frozen_lake',
+                        help='Environment to train')
     parser.add_argument('--env_mode', action='store',
                         choices=['d', 's'], default='d',
                         help='Whether the environment is stochastic or deterministic')
@@ -59,8 +43,48 @@ def parse_arguments():
     return parser.parse_args()
 
 
+def import_train_method(args):
+    if args.train_method == 'q':
+        from learn.q_learning import train
+    elif args.train_method == 'dqn':
+        from learn.dqn import train
+    elif args.train_method == 'pg':
+        from learn.policy_gradient import train
+    else:
+        raise NotImplementedError("Train method {} not implemented".format(args.train_method))
+    return train
+
+
+def create_environment(args):
+    is_stochastic = args.env_mode is 's'
+
+    if args.env == 'frozen_lake':
+        from environments.frozen_lake import FrozenLake
+        return FrozenLake(is_stochastic=is_stochastic)
+    elif args.env == 'dodge':
+        from environments.dodge import DodgeEnv
+        # TODO: Haven't seen stochastic dodge environment converging
+        return DodgeEnv(headless_mode=False, is_stochastic=is_stochastic)
+
+
+def preprocess_env(env, args):
+    if args.train_method in ['dqn', 'pg']:
+        env.reward_processor = lambda a, s, r, d: -1 if d and r != 1 else r
+        # 1 + 1 + 1 + 1 + 1  +  1 + 1 + 1 - 1 - 1 = 6
+        env.threshold = 0.6
+    if args.train_method == 'pg':
+        env.penalty_on_going_out = True
+
+
+def _train(train, env, args):
+    if args.interactive:
+        curses.wrapper(train_and_draw)
+    else:
+        train_options['history'] = train(env)
+
+
 def plot_history():
-    global history
+    history = train_options['history']
     if not history:
         return
 
@@ -84,9 +108,9 @@ def action_callback(lake, Q, episode, state, action, actual_action):
     Q = Q.reshape(list(lake.state_shape) + [lake.action_size])
 
     global callback_cursor
-    stdscr = callback_cursor
+    std_scr = callback_cursor
 
-    stdscr.clear()
+    std_scr.clear()
 
     episode_str = 'episode: ' + str(episode)
     possible_actions = ['up', 'right', 'down', 'left']
@@ -96,7 +120,7 @@ def action_callback(lake, Q, episode, state, action, actual_action):
         action_str = describe_action(action)
         actual_action_str = describe_action(actual_action)
         message += ', action: ' + action_str + ', actual_action: ' + actual_action_str
-    stdscr.addstr(0, 0, message)
+    std_scr.addstr(0, 0, message)
 
     for r in range(Q.shape[0]):
         for c in range(Q.shape[1]):
@@ -118,25 +142,25 @@ def action_callback(lake, Q, episode, state, action, actual_action):
 
             box_start = (r * 4, c * 16)
 
-            stdscr.addstr(box_start[0] + 1, box_start[1] + 1, first_line, curses.color_pair(1))
+            std_scr.addstr(box_start[0] + 1, box_start[1] + 1, first_line, curses.color_pair(1))
 
-            stdscr.addstr(box_start[0] + 2, box_start[1] + 1, second_line_1, curses.color_pair(1))
-            stdscr.addstr(box_start[0] + 2, box_start[1] + 7, second_line_2, curses.color_pair(2))
-            stdscr.addstr(box_start[0] + 2, box_start[1] + 11, second_line_3, curses.color_pair(1))
+            std_scr.addstr(box_start[0] + 2, box_start[1] + 1, second_line_1, curses.color_pair(1))
+            std_scr.addstr(box_start[0] + 2, box_start[1] + 7, second_line_2, curses.color_pair(2))
+            std_scr.addstr(box_start[0] + 2, box_start[1] + 11, second_line_3, curses.color_pair(1))
 
-            stdscr.addstr(box_start[0] + 3, box_start[1] + 1, third_line, curses.color_pair(1))
+            std_scr.addstr(box_start[0] + 3, box_start[1] + 1, third_line, curses.color_pair(1))
 
-    height, width = stdscr.getmaxyx()
+    height, width = std_scr.getmaxyx()
     if is_privileged_mode():
-        stdscr.addstr(height - 2, 0, "<Up>: Faster, <Down>: Slower")
-        stdscr.addstr(height - 1, 0, "<Space>: Pause, <Right or n>: Step, <Ctrl + c>: Exit")
+        std_scr.addstr(height - 2, 0, "<Up>: Faster, <Down>: Slower")
+        std_scr.addstr(height - 1, 0, "<Space>: Pause, <Right or n>: Step, <Ctrl + c>: Exit")
     else:
-        stdscr.attron(curses.color_pair(2))
-        stdscr.addstr(height - 2, 0, "Run as privileged mode for more controls.")
-        stdscr.attroff(curses.color_pair(2))
-        stdscr.addstr(height - 1, 0, "<Ctrl + c>: Exit")
+        std_scr.attron(curses.color_pair(2))
+        std_scr.addstr(height - 2, 0, "Run as privileged mode for more controls.")
+        std_scr.attroff(curses.color_pair(2))
+        std_scr.addstr(height - 1, 0, "<Ctrl + c>: Exit")
 
-    stdscr.refresh()
+    std_scr.refresh()
 
     sleep(delays[delay_idx])
     while is_paused:
@@ -175,28 +199,31 @@ def handle_command(event):
         delay_idx = max(min(delay_idx, len(delays) - 1), 0)
 
 
-def train_and_draw(stdscr):
-    stdscr.clear()
-    stdscr.refresh()
+def train_and_draw(std_scr):
+    std_scr.clear()
+    std_scr.refresh()
 
     curses.start_color()
     curses.init_pair(1, curses.COLOR_CYAN, curses.COLOR_BLACK)
     curses.init_pair(2, curses.COLOR_RED, curses.COLOR_BLACK)
     curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_WHITE)
 
-    stdscr.clear()
+    std_scr.clear()
 
     hook_keyboard_event()
 
-    global history, callback_cursor, lake, train
-    callback_cursor = stdscr
-    history = train(lake, action_callback=action_callback)
+    global callback_cursor
+    callback_cursor = std_scr
+    train = train_options['train']
+    env = train_options['env']
 
-    height, width = stdscr.getmaxyx()
-    stdscr.addstr(height - 2, 0, ' ' * (width - 1))
-    stdscr.addstr(height - 1, 0, ' ' * (width - 1))
-    stdscr.addstr(height - 1, 0, "Done all episodes. Press any key to exit")
-    k = stdscr.getch()
+    train_options['history'] = train(env, action_callback=action_callback)
+
+    height, width = std_scr.getmaxyx()
+    std_scr.addstr(height - 2, 0, ' ' * (width - 1))
+    std_scr.addstr(height - 1, 0, ' ' * (width - 1))
+    std_scr.addstr(height - 1, 0, "Done all episodes. Press any key to exit")
+    _ = std_scr.getch()
 
 
 if __name__ == "__main__":
