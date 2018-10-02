@@ -12,7 +12,7 @@ Alternative method is from Sung Kim's implementation of policy gradient on CartP
 
 class PGNAlternative(PGN):
     @property
-    def log_name(self):
+    def id_prefix(self):
         return 'PGNAlternative'
 
     # TODO: Loss makes no sense

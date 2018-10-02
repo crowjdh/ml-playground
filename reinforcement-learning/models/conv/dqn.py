@@ -7,7 +7,7 @@ from models.dqn_mixin import DQNMixin
 
 class ConvDQN(ConvRegressionNet, DQNMixin):
     @property
-    def log_name(self):
+    def id_prefix(self):
         return 'ConvDQN'
 
     def _init_summaries(self):

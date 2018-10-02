@@ -17,7 +17,7 @@ Source code and detailed explanation can be found here:
 
 class PGN(DenseRegressionNet):
     @property
-    def log_name(self):
+    def id_prefix(self):
         return 'PGN'
 
     # TODO: Loss makes no sense

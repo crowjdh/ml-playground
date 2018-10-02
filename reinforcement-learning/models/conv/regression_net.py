@@ -19,7 +19,7 @@ class ConvRegressionNet(RegressionNet):
             len(paddings) == len(filter_shapes)
     """
     def __init__(self, session, input_shape, filter_shapes, strides, paddings, hidden_sizes, output_size,
-                 learning_rate=1e-3, use_bias=True, name='main', write_tensor_log=True, log_name_postfix=''):
+                 learning_rate=1e-3, use_bias=True, name='main', write_tensor_log=True, id_postfix=''):
         self.input_shape = input_shape
         self.filter_shapes = filter_shapes
         self.strides = strides
@@ -29,7 +29,7 @@ class ConvRegressionNet(RegressionNet):
         # self.output_shape = self.calc_output_shape()
 
         super().__init__(session, learning_rate=learning_rate, use_bias=use_bias, name=name,
-                         write_tensor_log=write_tensor_log, log_name_postfix=log_name_postfix)
+                         write_tensor_log=write_tensor_log, id_postfix=id_postfix)
 
     def calc_output_shape(self):
         # noinspection PyShadowingNames
@@ -117,5 +117,5 @@ class ConvRegressionNet(RegressionNet):
         pass
 
     @abstractmethod
-    def log_name(self):
+    def id_prefix(self):
         pass

@@ -8,7 +8,7 @@ from models.dqn_mixin import DQNMixin
 
 class DenseDQN(DenseRegressionNet, DQNMixin):
     @property
-    def log_name(self):
+    def id_prefix(self):
         return 'DenseDQN'
 
     def _init_summaries(self):

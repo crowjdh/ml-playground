@@ -3,6 +3,7 @@ import tensorflow as tf
 from collections import deque
 
 import ene
+from models.checkpoint import Checkpoint
 from models.dqn_mixin import DQNMixin
 from utils.functions import noop
 from utils.logger import Logger
@@ -44,7 +45,7 @@ def create_dense_networks(sess, env):
     # target_dqn is slightly behind main_dqn(therefore, target_dqn has slightly old parameters),
     # so that training is done on stationary target.
     main_dqn = DQN(sess, input_dim, output_dim, hidden_sizes=[32, 16],
-                   learning_rate=1e-3, name='main', log_name_postfix='s' if env.is_stochastic else 'd')
+                   learning_rate=1e-3, name='main', id_postfix='s' if env.is_stochastic else 'd')
     target_dqn = DQN(sess, input_dim, output_dim, hidden_sizes=[32, 16],
                      learning_rate=1e-3, name='target', write_tensor_log=False)
 
@@ -65,7 +66,7 @@ def create_conv_networks(sess, env):
     paddings = ['SAME', 'SAME']
     hidden_sizes = [256]
     main_dqn = DQN(sess, env.state_shape, filters, strides, paddings, hidden_sizes, output_dim,
-                   learning_rate=1e-3, name='main')
+                   learning_rate=1e-3, name='main', id_postfix='s' if env.is_stochastic else 'd')
     target_dqn = DQN(sess, env.state_shape, filters, strides, paddings, hidden_sizes, output_dim,
                      learning_rate=1e-3, name='target', write_tensor_log=False)
 
@@ -73,8 +74,10 @@ def create_conv_networks(sess, env):
 
 
 def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode):
-    logger = Logger(main_dqn.log_dir_name)
+    logger = Logger(main_dqn.log_dir_path)
     clear_manager = ClearManager()
+    checkpoint = Checkpoint(sess, main_dqn.id)
+    checkpoint.load()
 
     select = ene.modes[ene_mode]
     possible_states = getattr(env, 'possible_states', None)
@@ -88,7 +91,7 @@ def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode)
         'generator': lambda s: main_dqn.predict(s)[0],
     }
 
-    for episode in range(episodes):
+    for episode in range(checkpoint.next_episode, episodes):
         state = env.reset()
         done = False
         clear_manager.do_soft_reset()
@@ -110,6 +113,7 @@ def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode)
 
             action_callback(env, Q, episode, state, action, actual_action)
 
+        checkpoint.save(episode)
         if Q is not None:
             summary = env.get_summary_lines(Q)
             logger.log_summary(episode, summary)

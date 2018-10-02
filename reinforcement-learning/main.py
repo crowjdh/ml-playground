@@ -68,6 +68,8 @@ def create_environment(args):
 
 
 def preprocess_env(env, args):
+    if args.env != 'frozen_lake':
+        return
     if args.train_method in ['dqn', 'pg']:
         env.reward_processor = lambda a, s, r, d: -1 if d and r != 1 else r
         # 1 + 1 + 1 + 1 + 1  +  1 + 1 + 1 - 1 - 1 = 6

@@ -39,14 +39,14 @@ class RMO(pygame.sprite.Sprite):
             self.initial_position = initial_position
         else:
             self.initial_position = (random.randint(third, 2 * third), random.randint(third, 2 * third))
-        self.reset_rect()
-        self.speed = self.make_random_speed() if randomly_change_direction else list(RMO.normal_speed)
         self.randomly_change_direction = randomly_change_direction
-        self.frame_since_last_speed_update = 0
+        self.reset()
 
-    def reset_rect(self):
-        # noinspection PyAttributeOutsideInit
+    # noinspection PyAttributeOutsideInit
+    def reset(self):
         self.rect = pygame.Rect(self.initial_position, RMO.size)
+        self.speed = self.make_random_speed() if self.randomly_change_direction else list(RMO.normal_speed)
+        self.frame_since_last_speed_update = 0
 
     @property
     def should_update_speed(self):
@@ -168,21 +168,42 @@ class Dodge:
                 # dy = 1
             collided_zombies = self.tick(dx, dy)
             if len(collided_zombies) > 0:
+                self.tries += 1
                 self.reset_game()
 
         pygame.quit()
 
     def tick(self, dx, dy):
+        self.ticks += 1
+        self.update_game_objects(dx, dy)
+        self.update_screen()
+
+        self.clock.tick(40)
+
+        return pygame.sprite.spritecollide(self.player, self.zombies, dokill=False)
+
+    def reset_game(self):
+        self.ticks = 0
+
+        self.reset_game_objects()
+        self.update_screen()
+
+    def reset_game_objects(self):
+        self.player.reset()
+        for zombie in self.zombies.sprites():
+            zombie.reset()
+
+    def update_game_objects(self, dx, dy):
         if dx or dy:
             self.player.move(dx, dy)
 
-        self.render_updates.clear(self.screen, self.background)
         self.render_updates.update()
 
-        self.ticks += 1
-
+    def update_screen(self):
+        self.render_updates.clear(self.screen, self.background)
         dirty = self.render_updates.draw(self.screen)
 
+        # TODO: Separate score area from game area
         if self.show_additional_information:
             ticks = self.font.render(str(self.ticks), True, Dodge.font_color, Dodge.bg_color)
             self.screen.fill(Dodge.bg_color, rect=self.ticks_area)
@@ -195,20 +216,7 @@ class Dodge:
             dirty.append(self.ticks_area)
             dirty.append(self.tries_area)
 
-        collided_zombies = pygame.sprite.spritecollide(self.player, self.zombies, dokill=False)
-
         pygame.display.update(dirty)
-
-        self.clock.tick(40)
-
-        return collided_zombies
-
-    def reset_game(self):
-        self.ticks = 0
-        self.tries += 1
-        self.player.reset_rect()
-        for zombie in self.zombies.sprites():
-            zombie.reset_rect()
 
 
 def random_dx_dy():

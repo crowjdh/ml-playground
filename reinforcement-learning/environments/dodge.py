@@ -26,21 +26,25 @@ class DodgeEnv(Dodge, Environment):
         8: (-1, -1),
     })
 
-    def __init__(self, threshold=.8, headless_mode=False, is_stochastic=True):
+    # TODO: Adjust threshold
+    def __init__(self, threshold=500, headless_mode=False, is_stochastic=True):
         disable_pygame_display() if headless_mode else noop
         Dodge.__init__(self, move_zombies_randomly=is_stochastic)
-        Environment.__init__(self, [1] + list(DodgeEnv.screen_size), len(DodgeEnv.actions), threshold,
-                             network_mode=Environment.convolution)
+        Environment.__init__(self, list(DodgeEnv.screen_size) + [1], len(DodgeEnv.actions), threshold,
+                             is_stochastic=is_stochastic, network_mode=Environment.convolution)
 
     def step(self, action) -> tuple:
         unflattened_action = self.unflatten_action(action)
         collided_zombies = self.tick(*unflattened_action)
-        ensure_draw()
 
         state = self.frame
         done = len(collided_zombies) > 0
         reward = 1 if not done else -100
         self.steps += 1
+
+        if self.steps > self.threshold * 2:
+            done = True
+            reward = 1
 
         return action, state, reward, done
 
@@ -67,4 +71,5 @@ class DodgeEnv(Dodge, Environment):
 
     @property
     def frame(self):
-        return get_grayscale_frame()[np.newaxis]
+        ensure_draw()
+        return np.expand_dims(get_grayscale_frame(), axis=-1)

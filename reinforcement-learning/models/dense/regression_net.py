@@ -9,13 +9,13 @@ from models.regression_net import RegressionNet
 
 class DenseRegressionNet(RegressionNet):
     def __init__(self, session, input_dim, output_size, hidden_sizes=(16,),
-                 learning_rate=1e-3, use_bias=True, name='main', write_tensor_log=True, log_name_postfix=''):
+                 learning_rate=1e-3, use_bias=True, name='main', write_tensor_log=True, id_postfix=''):
         self.input_dim = input_dim
         self.output_size = output_size
         self.hidden_sizes = hidden_sizes
 
         super().__init__(session, learning_rate=learning_rate, use_bias=use_bias, name=name,
-                         write_tensor_log=write_tensor_log, log_name_postfix=log_name_postfix)
+                         write_tensor_log=write_tensor_log, id_postfix=id_postfix)
 
     def _create_input_tensors(self) -> Tuple[tf.Tensor, tf.Tensor]:
         states = tf.placeholder(tf.float32, [None, self.input_dim], name='states')
@@ -46,5 +46,5 @@ class DenseRegressionNet(RegressionNet):
         pass
 
     @abstractmethod
-    def log_name(self):
+    def id_prefix(self):
         pass

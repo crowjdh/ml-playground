@@ -1,3 +1,4 @@
+import os
 from abc import ABC, abstractmethod
 from typing import *
 import tensorflow as tf
@@ -6,13 +7,13 @@ from utils.functions import identity
 
 class RegressionNet(ABC):
     def __init__(self, session, learning_rate=1e-3, use_bias=True, name='main',
-                 write_tensor_log=True, log_name_postfix=''):
+                 write_tensor_log=True, id_postfix=''):
         self.session = session
         self.learning_rate = learning_rate
         self.use_bias = use_bias
         self.name = name
 
-        self.log_name_postfix = log_name_postfix
+        self.id_postfix = id_postfix
         self.write_tensor_log = write_tensor_log
 
         self._build_graph()
@@ -22,7 +23,7 @@ class RegressionNet(ABC):
         if self.write_tensor_log:
             self._prepare_log_dir()
             self.merged_summery = tf.summary.merge_all(key=self.name)
-            self.train_writer = tf.summary.FileWriter(self.log_dir_name, self.session.graph)
+            self.train_writer = tf.summary.FileWriter(self.log_dir_path, self.session.graph)
 
     def __exit__(self, exception_type, exception_value, traceback):
         if self.write_tensor_log:
@@ -83,12 +84,16 @@ class RegressionNet(ABC):
 
     @property
     @abstractmethod
-    def log_name(self):
+    def id_prefix(self):
         pass
 
     @property
-    def log_dir_name(self):
-        return '.logs/{}_{}'.format(self.log_name, self.log_name_postfix)
+    def id(self):
+        return '{}_{}'.format(self.id_prefix, self.id_postfix)
+
+    @property
+    def log_dir_path(self):
+        return os.path.join('.logs', self.id)
 
     # noinspection PyUnresolvedReferences,PyMethodMayBeStatic
     def _get_weight_initializer(self):
@@ -100,9 +105,9 @@ class RegressionNet(ABC):
         tf.summary.histogram('y', self._y, collections=[self.name])
 
     def _prepare_log_dir(self):
-        if tf.gfile.Exists(self.log_dir_name):
-            tf.gfile.DeleteRecursively(self.log_dir_name)
-        tf.gfile.MakeDirs(self.log_dir_name)
+        if tf.gfile.Exists(self.log_dir_path):
+            tf.gfile.DeleteRecursively(self.log_dir_path)
+        tf.gfile.MakeDirs(self.log_dir_path)
 
     def predict(self, states):
         states = self._process_input(states)
