@@ -9,6 +9,7 @@ from utils.functions import noop
 from utils.logger import Logger
 from learn.utils.progress_utils import ClearManager
 from learn.utils.environment_player import simulate_play
+from utils.replay_manager import ReplayManager
 
 DISCOUNT_RATE = 0.99
 REPLAY_MEMORY = 50000
@@ -76,6 +77,7 @@ def create_conv_networks(sess, env):
 def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode):
     logger = Logger(main_dqn.log_dir_path)
     clear_manager = ClearManager()
+    replay_manager = ReplayManager(main_dqn.id)
     checkpoint = Checkpoint(sess, main_dqn.id)
     checkpoint.load()
 
@@ -99,7 +101,8 @@ def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode)
         Q = main_dqn.predict(possible_states) if possible_states else None
         while not done:
             action = select(episode, state, action_spec)
-            actual_action, new_state, reward, done = env.step(action)
+            with replay_manager.managed_random_context(action):
+                actual_action, new_state, reward, done = env.step(action)
 
             clear_manager.save_reward(reward)
             replay_memory.append((state, action, reward, new_state, done))
@@ -114,6 +117,7 @@ def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode)
             action_callback(env, Q, episode, state, action, actual_action)
 
         checkpoint.save(episode)
+        replay_manager.save(episode)
         if Q is not None:
             summary = env.get_summary_lines(Q)
             logger.log_summary(episode, summary)

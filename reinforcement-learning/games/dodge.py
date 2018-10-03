@@ -1,4 +1,3 @@
-import random
 from math import sqrt
 
 import pygame
@@ -38,7 +37,7 @@ class RMO(pygame.sprite.Sprite):
         if initial_position:
             self.initial_position = initial_position
         else:
-            self.initial_position = (random.randint(third, 2 * third), random.randint(third, 2 * third))
+            self.initial_position = (np.random.randint(third, 2 * third), np.random.randint(third, 2 * third))
         self.randomly_change_direction = randomly_change_direction
         self.reset()
 
@@ -78,8 +77,8 @@ class RMO(pygame.sprite.Sprite):
 
     @staticmethod
     def make_random_speed():
-        speed_x = random.choice(RMO.rand_speed_candidates)
-        speed_y = random.choice(RMO.rand_speed_candidates)
+        speed_x = np.random.choice(RMO.rand_speed_candidates)
+        speed_y = np.random.choice(RMO.rand_speed_candidates)
         speed = sqrt(pow(speed_x, 2) + pow(speed_y, 2))
         if speed > RMO.speed_limit:
             ratio = speed / RMO.speed_limit
@@ -220,7 +219,7 @@ class Dodge:
 
 
 def random_dx_dy():
-    return random.randint(-1, 1), random.randint(-1, 1)
+    return np.random.randint(-1, 1), np.random.randint(-1, 1)
 
 
 def get_grayscale_frame():

@@ -165,3 +165,4 @@ resources/
 .idea/markdown-navigator/profiles_settings.xml
 markdown-exported-files.xml
 **/.checkpoints/
+**/.replay/
