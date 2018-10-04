@@ -15,6 +15,7 @@ DISCOUNT_RATE = 0.99
 REPLAY_MEMORY = 50000
 BATCH_SIZE = 64
 TARGET_UPDATE_FREQUENCY = 5
+CHECKPOINT_FREQUENCY = 10
 
 
 def train(env, episodes=50000, action_callback=noop, ene_mode='e-greedy'):
@@ -77,9 +78,8 @@ def create_conv_networks(sess, env):
 def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode):
     logger = Logger(main_dqn.log_dir_path)
     clear_manager = ClearManager()
-    replay_manager = ReplayManager(main_dqn.id)
-    checkpoint = Checkpoint(sess, main_dqn.id)
-    checkpoint.load()
+    replay_manager = ReplayManager(main_dqn.id, flush_frequency=CHECKPOINT_FREQUENCY)
+    checkpoint = Checkpoint(sess, main_dqn.id, save_frequency=CHECKPOINT_FREQUENCY).load()
 
     select = ene.modes[ene_mode]
     possible_states = getattr(env, 'possible_states', None)

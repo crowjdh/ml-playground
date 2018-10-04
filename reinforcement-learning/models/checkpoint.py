@@ -39,3 +39,5 @@ class Checkpoint:
         if checkpoint_state and checkpoint_state.model_checkpoint_path:
             checkpoint_name = os.path.basename(checkpoint_state.model_checkpoint_path)
             self.saver.restore(self.sess, os.path.join(self.checkpoint_dir_path, checkpoint_name))
+
+        return self
