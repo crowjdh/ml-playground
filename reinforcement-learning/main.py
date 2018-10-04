@@ -16,6 +16,13 @@ callback_cursor = None
 def main():
     args = parse_arguments()
 
+    if args.run_mode == 'train':
+        run_train(args)
+    elif args.run_mode == 'replay':
+        run_replay(args)
+
+
+def run_train(args):
     train_options['train'] = train = import_train_method(args)
     train_options['env'] = env = create_environment(args)
 
@@ -25,21 +32,45 @@ def main():
     plot_history()
 
 
+def run_replay(args):
+    from utils.replay_manager import ReplayManager
+
+    env = create_environment(args)
+    ReplayManager(args.name).replay(env, start_idx=args.start_episode, end_idx=args.end_episode)
+
+
 def parse_arguments():
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', dest='interactive', action='store_true',
-                        help='Enable interactive mode')
+
     parser.add_argument('--env', action='store',
                         choices=['frozen_lake', 'dodge'], default='frozen_lake',
                         help='Environment to train')
-    parser.add_argument('--env_mode', action='store',
-                        choices=['d', 's'], default='d',
-                        help='Whether the environment is stochastic or deterministic')
-    parser.add_argument('--train', dest='train_method', action='store',
-                        choices=['q', 'dqn', 'pg'], default='dqn',
-                        help='Training method')
+
+    sub_parsers = parser.add_subparsers(help='Mode')
+    train_parser = sub_parsers.add_parser('t', help='Train mode')
+    replay_parser = sub_parsers.add_parser('r', help='Replay mode')
+
+    train_parser.set_defaults(run_mode='train')
+    replay_parser.set_defaults(run_mode='replay')
+
+    train_parser.add_argument('-i', dest='interactive', action='store_true',
+                              help='Enable interactive mode')
+    train_parser.add_argument('--env_mode', action='store',
+                              choices=['d', 's'], default='d',
+                              help='Whether the environment is stochastic or deterministic')
+    train_parser.add_argument('--train', dest='train_method', action='store',
+                              choices=['q', 'dqn', 'pg'], default='dqn',
+                              help='Training method')
+
+    replay_parser.add_argument('-n', '--name', dest='name', action='store', required=True,
+                               help='Name of saved replay')
+    replay_parser.add_argument('--start', dest='start_episode', action='store', default=None,
+                               type=int, help='Episode to replay from')
+    replay_parser.add_argument('--end', dest='end_episode', action='store', default=None,
+                               type=int, help='Episode to replay until')
+
     return parser.parse_args()
 
 
@@ -56,7 +87,7 @@ def import_train_method(args):
 
 
 def create_environment(args):
-    is_stochastic = args.env_mode is 's'
+    is_stochastic = args.run_mode == 'train' and args.env_mode is 's'
 
     if args.env == 'frozen_lake':
         from environments.frozen_lake import FrozenLake

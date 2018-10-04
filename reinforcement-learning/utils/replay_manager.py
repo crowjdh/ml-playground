@@ -8,6 +8,18 @@ import numpy as np
 REPLAY_ROOT_DIR_PATH = '.replay'
 
 
+def _parse_episode_range(episodes, start_idx, end_idx):
+    start_idx = start_idx if start_idx is not None else 1
+    end_idx = end_idx if end_idx is not None else episodes
+
+    assert 1 <= start_idx <= end_idx <= episodes, "Invalid index were given. Must satisfy: " \
+                                                  "1 <= start_idx <= end_idx <= episodes({})\n" \
+                                                  "Given: " \
+                                                  "start_idx: {}, end_idx: {}".format(episodes, start_idx, end_idx)
+
+    return start_idx, end_idx
+
+
 class ReplayManager:
     def __init__(self, replay_id, flush_frequency=10):
         self.id = replay_id
@@ -42,14 +54,16 @@ class ReplayManager:
         if episode % self.flush_frequency == 0:
             self._flush_as(episode)
 
-    def replay(self, env):
+    def replay(self, env, start_idx=None, end_idx=None):
         episodes, history = self._load()
 
         if not episodes or not history:
             raise IOError("Either file {} or {} does not exists."
                           .format(self.state_file_path, self.history_file_path))
 
-        for episode in range(1, episodes + 1):
+        start_idx, end_idx = _parse_episode_range(episodes, start_idx, end_idx)
+
+        for episode in range(start_idx, end_idx + 1):
             env.reset()
 
             seed_action_pairs = history[episode - 1]
