@@ -6,14 +6,14 @@ from utils.functions import identity
 
 
 class RegressionNet(ABC):
-    def __init__(self, session, learning_rate=1e-3, use_bias=True, name='main',
-                 write_tensor_log=True, id_postfix=''):
+    def __init__(self, session, env_id, learning_rate=1e-3, use_bias=True, name='main',
+                 write_tensor_log=True):
         self.session = session
+        self.env_id = env_id
         self.learning_rate = learning_rate
         self.use_bias = use_bias
         self.name = name
 
-        self.id_postfix = id_postfix
         self.write_tensor_log = write_tensor_log
 
         self._build_graph()
@@ -83,13 +83,8 @@ class RegressionNet(ABC):
         return None
 
     @property
-    @abstractmethod
-    def id_prefix(self):
-        pass
-
-    @property
     def id(self):
-        return '{}_{}'.format(self.id_prefix, self.id_postfix)
+        return '{}_{}'.format(self.env_id, self.__class__.__name__)
 
     @property
     def log_dir_path(self):

@@ -13,6 +13,10 @@ class Environment(ABC):
         self.action_size = action_size
         self.network_mode = network_mode
 
+    @property
+    def id(self):
+        return '{}_{}'.format(self.__class__.__name__, 's' if self.is_stochastic else 'd')
+
     @abstractmethod
     def step(self, action) -> tuple:
         pass

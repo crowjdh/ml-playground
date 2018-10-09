@@ -7,10 +7,6 @@ from models.dqn_mixin import DQNMixin
 
 
 class DenseDQN(DenseRegressionNet, DQNMixin):
-    @property
-    def id_prefix(self):
-        return 'DenseDQN'
-
     def _init_summaries(self):
         super(DenseDQN, self)._init_summaries()
         tf.summary.scalar('loss', self._loss_tensor, collections=[self.name])

@@ -46,9 +46,9 @@ def create_dense_networks(sess, env):
 
     # target_dqn is slightly behind main_dqn(therefore, target_dqn has slightly old parameters),
     # so that training is done on stationary target.
-    main_dqn = DQN(sess, input_dim, output_dim, hidden_sizes=[32, 16],
-                   learning_rate=1e-3, name='main', id_postfix='s' if env.is_stochastic else 'd')
-    target_dqn = DQN(sess, input_dim, output_dim, hidden_sizes=[32, 16],
+    main_dqn = DQN(sess, env.id, input_dim, output_dim, hidden_sizes=[32, 16],
+                   learning_rate=1e-3, name='main')
+    target_dqn = DQN(sess, env.id, input_dim, output_dim, hidden_sizes=[32, 16],
                      learning_rate=1e-3, name='target', write_tensor_log=False)
 
     return main_dqn, target_dqn
@@ -67,9 +67,9 @@ def create_conv_networks(sess, env):
     strides = [4, 2]
     paddings = ['SAME', 'SAME']
     hidden_sizes = [256]
-    main_dqn = DQN(sess, env.state_shape, filters, strides, paddings, hidden_sizes, output_dim,
-                   learning_rate=1e-3, name='main', id_postfix='s' if env.is_stochastic else 'd')
-    target_dqn = DQN(sess, env.state_shape, filters, strides, paddings, hidden_sizes, output_dim,
+    main_dqn = DQN(sess, env.id, env.state_shape, filters, strides, paddings, hidden_sizes, output_dim,
+                   learning_rate=1e-3, name='main')
+    target_dqn = DQN(sess, env.id, env.state_shape, filters, strides, paddings, hidden_sizes, output_dim,
                      learning_rate=1e-3, name='target', write_tensor_log=False)
 
     return main_dqn, target_dqn

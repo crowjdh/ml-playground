@@ -18,8 +18,8 @@ class ConvRegressionNet(RegressionNet):
         paddings: Array which contains padding algorithms for each convolution.. Should be:
             len(paddings) == len(filter_shapes)
     """
-    def __init__(self, session, input_shape, filter_shapes, strides, paddings, hidden_sizes, output_size,
-                 learning_rate=1e-3, use_bias=True, name='main', write_tensor_log=True, id_postfix=''):
+    def __init__(self, session, env_id, input_shape, filter_shapes, strides, paddings, hidden_sizes, output_size,
+                 learning_rate=1e-3, use_bias=True, name='main', write_tensor_log=True):
         self.input_shape = input_shape
         self.filter_shapes = filter_shapes
         self.strides = strides
@@ -28,8 +28,8 @@ class ConvRegressionNet(RegressionNet):
         self.output_size = output_size
         # self.output_shape = self.calc_output_shape()
 
-        super().__init__(session, learning_rate=learning_rate, use_bias=use_bias, name=name,
-                         write_tensor_log=write_tensor_log, id_postfix=id_postfix)
+        super().__init__(session, env_id, learning_rate=learning_rate, use_bias=use_bias, name=name,
+                         write_tensor_log=write_tensor_log)
 
     def calc_output_shape(self):
         # noinspection PyShadowingNames
@@ -114,8 +114,4 @@ class ConvRegressionNet(RegressionNet):
 
     @abstractmethod
     def _get_optimizer_type(self) -> Type[tf.train.Optimizer]:
-        pass
-
-    @abstractmethod
-    def id_prefix(self):
         pass

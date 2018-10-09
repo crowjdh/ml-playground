@@ -8,14 +8,14 @@ from models.regression_net import RegressionNet
 
 
 class DenseRegressionNet(RegressionNet):
-    def __init__(self, session, input_dim, output_size, hidden_sizes=(16,),
-                 learning_rate=1e-3, use_bias=True, name='main', write_tensor_log=True, id_postfix=''):
+    def __init__(self, session, env_id, input_dim, output_size, hidden_sizes=(16,),
+                 learning_rate=1e-3, use_bias=True, name='main', write_tensor_log=True):
         self.input_dim = input_dim
         self.output_size = output_size
         self.hidden_sizes = hidden_sizes
 
-        super().__init__(session, learning_rate=learning_rate, use_bias=use_bias, name=name,
-                         write_tensor_log=write_tensor_log, id_postfix=id_postfix)
+        super().__init__(session, env_id, learning_rate=learning_rate, use_bias=use_bias, name=name,
+                         write_tensor_log=write_tensor_log)
 
     def _create_input_tensors(self) -> Tuple[tf.Tensor, tf.Tensor]:
         states = tf.placeholder(tf.float32, [None, self.input_dim], name='states')
@@ -43,8 +43,4 @@ class DenseRegressionNet(RegressionNet):
 
     @abstractmethod
     def _get_optimizer_type(self) -> Type[tf.train.Optimizer]:
-        pass
-
-    @abstractmethod
-    def id_prefix(self):
         pass
