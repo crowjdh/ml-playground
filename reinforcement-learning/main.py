@@ -87,7 +87,9 @@ def import_train_method(args):
 
 
 def create_environment(args):
-    is_stochastic = args.run_mode == 'train' and args.env_mode is 's'
+    # FIX: This line is broken
+    # is_stochastic = args.run_mode == 'train' and args.env_mode is 's'
+    is_stochastic = True
 
     if args.env == 'frozen_lake':
         from environments.frozen_lake import FrozenLake

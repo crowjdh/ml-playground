@@ -94,7 +94,8 @@ def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode)
     }
 
     for episode in range(checkpoint.next_episode, episodes):
-        state = env.reset()
+        with replay_manager.managed_random_context(ReplayManager.KEY_RESET):
+            state = env.reset()
         done = False
         clear_manager.do_soft_reset()
 

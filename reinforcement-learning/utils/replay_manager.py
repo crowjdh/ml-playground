@@ -21,6 +21,8 @@ def _parse_episode_range(episodes, start_idx, end_idx):
 
 
 class ReplayManager:
+    KEY_RESET = -1
+
     def __init__(self, replay_id, flush_frequency=10):
         self.id = replay_id
         self.flush_frequency = flush_frequency
@@ -64,9 +66,14 @@ class ReplayManager:
         start_idx, end_idx = _parse_episode_range(episodes, start_idx, end_idx)
 
         for episode in range(start_idx, end_idx + 1):
-            env.reset()
+            seed_pairs = history[episode - 1]
+            reset_seed_pair = seed_pairs[0]
+            seed_action_pairs = seed_pairs[1:]
 
-            seed_action_pairs = history[episode - 1]
+            seed, code = reset_seed_pair
+            with self.context(seed):
+                env.reset()
+
             for seed_action_pair in seed_action_pairs:
                 seed, action = seed_action_pair
                 with self.context(seed):
