@@ -47,6 +47,9 @@ def parse_arguments():
     parser.add_argument('--env', action='store',
                         choices=['frozen_lake', 'dodge'], default='frozen_lake',
                         help='Environment to train')
+    parser.add_argument('--env_mode', action='store',
+                        choices=['d', 's'], default='d',
+                        help='Whether the environment is stochastic or deterministic')
 
     sub_parsers = parser.add_subparsers(help='Mode')
     train_parser = sub_parsers.add_parser('t', help='Train mode')
@@ -57,9 +60,6 @@ def parse_arguments():
 
     train_parser.add_argument('-i', dest='interactive', action='store_true',
                               help='Enable interactive mode')
-    train_parser.add_argument('--env_mode', action='store',
-                              choices=['d', 's'], default='d',
-                              help='Whether the environment is stochastic or deterministic')
     train_parser.add_argument('--train', dest='train_method', action='store',
                               choices=['q', 'dqn', 'pg'], default='dqn',
                               help='Training method')
@@ -87,9 +87,7 @@ def import_train_method(args):
 
 
 def create_environment(args):
-    # FIX: This line is broken
-    # is_stochastic = args.run_mode == 'train' and args.env_mode is 's'
-    is_stochastic = True
+    is_stochastic = args.env_mode is 's'
 
     if args.env == 'frozen_lake':
         from environments.frozen_lake import FrozenLake
