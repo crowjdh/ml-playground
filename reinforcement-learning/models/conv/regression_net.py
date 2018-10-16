@@ -71,28 +71,50 @@ class ConvRegressionNet(RegressionNet):
 
         return states, y
 
+    def summarise_conv_layer(self, conv_layer, desc):
+        channels = conv_layer.kernel.shape[2]
+        channel_start = 0
+        image_idx = 0
+        while channel_start < channels:
+            channel_end = channel_start + 4
+            if channel_end > channels:
+                avail_channels = channels % 4
+                if avail_channels == 0:
+                    avail_channels = 4
+                elif avail_channels == 2:
+                    avail_channels = 1
+                channel_end = channel_start + avail_channels
+            k = conv_layer.kernel[:, :, channel_start:channel_end, image_idx:image_idx+1]
+            f = tf.transpose(k, [3, 0, 1, 2])
+            tf.summary.image('filter_{}_ch_{}-{}'.format(desc, channel_start, channel_end), f, collections=[self.name])
+            channel_start = channel_end
+
+    def conv(self, inputs, idx, desc, activation=None):
+        name = 'conv_' + desc
+        with tf.name_scope(name):
+            filter_shape, stride, padding = self.filter_shapes[idx], self.strides[idx], self.paddings[idx]
+            f_n, f_c, ww, hh = filter_shape
+
+            conv_layer = tf.layers.Conv2D(f_n, (hh, ww), stride,
+                                          name=name, padding=padding, activation=activation,
+                                          use_bias=self.use_bias,
+                                          kernel_initializer=self._get_weight_initializer(),
+                                          bias_initializer=self._get_bias_initializer())
+            conv_out = conv_layer.apply(inputs)
+
+            tf.summary.histogram('weight_' + desc, conv_layer.kernel, collections=[self.name])
+            if self.use_bias:
+                tf.summary.histogram('bias_' + desc, conv_layer.bias, collections=[self.name])
+
+            return conv_layer, conv_out
+
     def _create_network(self, out) -> Tuple[tf.Tensor, tf.Tensor]:
-        def conv(inputs, idx, desc, activation=None):
-            name = 'conv_' + desc
-            with tf.name_scope(name):
-                filter_shape, stride, padding = self.filter_shapes[idx], self.strides[idx], self.paddings[idx]
-                f_n, f_c, ww, hh = filter_shape
-
-                conv_layer = tf.layers.Conv2D(f_n, (hh, ww), stride,
-                                              name=name, padding=padding, activation=activation,
-                                              use_bias=self.use_bias,
-                                              kernel_initializer=self._get_weight_initializer())
-                conv_out = conv_layer.apply(inputs)
-
-                tf.summary.histogram('weight_' + desc, conv_layer.kernel, collections=[self.name])
-                if self.use_bias:
-                    tf.summary.histogram('bias_' + desc, conv_layer.bias, collections=[self.name])
-
-                return conv_out
-
         with tf.variable_scope(self.name):
+            img = tf.transpose(out[0:1], [0, 2, 1, 3])
+            tf.summary.image('input_img', img, collections=[self.name])
             for f_idx in range(len(self.filter_shapes)):
-                out = conv(out, f_idx, str(f_idx), activation=tf.nn.relu)
+                layer, out = self.conv(out, f_idx, str(f_idx), activation=tf.nn.relu)
+                self.summarise_conv_layer(layer, str(f_idx))
             out = tf.reshape(out, (-1, np.prod(out.shape[1:])))
             for h_idx, hidden_size in enumerate(self.hidden_sizes):
                 out = self.dense(out, hidden_size, str(h_idx), activation=tf.nn.relu)

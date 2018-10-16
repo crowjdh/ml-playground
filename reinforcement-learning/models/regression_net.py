@@ -48,6 +48,7 @@ class RegressionNet(ABC):
         with tf.name_scope(name):
             dense_layer = tf.layers.Dense(units, activation=activation, use_bias=self.use_bias,
                                           kernel_initializer=self._get_weight_initializer(),
+                                          bias_initializer=self._get_bias_initializer(),
                                           name=name)
             dense_out = dense_layer.apply(inputs)
 
@@ -93,6 +94,10 @@ class RegressionNet(ABC):
     # noinspection PyUnresolvedReferences,PyMethodMayBeStatic
     def _get_weight_initializer(self):
         return tf.contrib.layers.xavier_initializer()
+
+    # noinspection PyUnresolvedReferences,PyMethodMayBeStatic
+    def _get_bias_initializer(self):
+        return tf.contrib.layers.xavier_initializer() if self.use_bias else tf.zeros_initializer()
 
     def _init_summaries(self):
         tf.summary.histogram('input', self._states, collections=[self.name])

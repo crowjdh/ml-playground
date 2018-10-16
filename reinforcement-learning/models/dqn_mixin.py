@@ -29,7 +29,7 @@ class DQNMixin:
     def parse_minibatch_vectorized(minibatch, main_dqn, target_dqn, gamma):
         def unravel(values):
             shape = [values.shape[0]] + list(values[0].shape)
-            new_values = np.empty(shape, np.int)
+            new_values = np.empty(shape)
             for i in range(len(values)):
                 value = values[i]
                 new_values[i] = value

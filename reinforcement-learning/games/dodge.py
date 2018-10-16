@@ -177,7 +177,7 @@ class Dodge:
         self.update_game_objects(dx, dy)
         self.update_screen()
 
-        self.clock.tick(40)
+        self.clock.tick()
 
         return pygame.sprite.spritecollide(self.player, self.zombies, dokill=False)
 
@@ -225,8 +225,8 @@ def random_dx_dy():
 def get_grayscale_frame():
     frame = surfarray.array3d(
         pygame.display.get_surface()).astype(np.uint8)
+    frame = frame / 255
     frame = 0.21 * frame[:, :, 0] + 0.72 * frame[:, :, 1] + 0.07 * frame[:, :, 2]
-    frame = np.round(frame).astype(np.uint8)
 
     return frame
 

@@ -57,7 +57,7 @@ def create_dense_networks(sess, env):
 def create_conv_networks(sess, env):
     from models.conv.dqn import ConvDQN as DQN
 
-    c = env.state_shape[0]
+    c = env.state_shape[-1]
     output_dim = env.action_size
 
     # Used same filter shapes with Atari Deep Reinforcement Learning:
@@ -68,9 +68,9 @@ def create_conv_networks(sess, env):
     paddings = ['SAME', 'SAME']
     hidden_sizes = [256]
     main_dqn = DQN(sess, env.id, env.state_shape, filters, strides, paddings, hidden_sizes, output_dim,
-                   learning_rate=1e-3, name='main')
+                   learning_rate=1e-4, name='main')
     target_dqn = DQN(sess, env.id, env.state_shape, filters, strides, paddings, hidden_sizes, output_dim,
-                     learning_rate=1e-3, name='target', write_tensor_log=False)
+                     learning_rate=1e-4, name='target', write_tensor_log=False)
 
     return main_dqn, target_dqn
 
