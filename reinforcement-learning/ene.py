@@ -16,6 +16,7 @@ def select_with_noise(episode, state, action_spec, history=None):
 
 def select_with_e_greedy(episode, state, action_spec, history=None):
     e = 1. / ((episode / 10) + 1)
+    e = max(e, 0.03)
 
     choose_action_randomly = (np.random.rand(1) < e)[0]
 

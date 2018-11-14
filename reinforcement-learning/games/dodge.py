@@ -24,7 +24,7 @@ def should_quit(event=None):
 # noinspection PyUnresolvedReferences
 class RMO(pygame.sprite.Sprite):
     speed_limit = 5
-    normal_speed = [3, 3]
+    normal_speed = [3, 2]
     rand_speed_candidates = list(range(-4, -1)) + list(range(1, 4))
     size = (10, 10)
     update_freq = 12
@@ -43,7 +43,7 @@ class RMO(pygame.sprite.Sprite):
 
     # noinspection PyAttributeOutsideInit
     def reset(self):
-        self.rect = pygame.Rect(self.initial_position, RMO.size)
+        self.rect = RMO.make_rect(self.initial_position, RMO.size)
         self.speed = self.make_random_speed() if self.randomly_change_direction else list(RMO.normal_speed)
         self.frame_since_last_speed_update = 0
 
@@ -62,9 +62,9 @@ class RMO(pygame.sprite.Sprite):
     def update(self):
         target_rect = self.rect.move(*self.speed)
         if not SCREEN_RECT.contains(target_rect):
-            if not self.is_inside_along_x:
+            if not RMO.contains_rect_horizontally(SCREEN_RECT, target_rect):
                 self.speed[0] *= -1
-            if not self.is_inside_along_y:
+            if not RMO.contains_rect_vertically(SCREEN_RECT, target_rect):
                 self.speed[1] *= -1
             target_rect = self.rect.move(*self.speed)
             self.frame_since_last_speed_update = 0
@@ -86,6 +86,27 @@ class RMO(pygame.sprite.Sprite):
             speed_y /= ratio
 
         return [speed_x, speed_y]
+
+    @staticmethod
+    def make_rect(center, size):
+        width, height = size
+        center_x, center_y = center
+
+        left_offset = width / 2
+        top_offset = height / 2
+
+        left = center_x - left_offset
+        top = center_y - top_offset
+
+        return pygame.Rect(left, top, width, height)
+
+    @staticmethod
+    def contains_rect_horizontally(lhs, rhs):
+        return lhs.left <= rhs.left and rhs.right <= lhs.right
+
+    @staticmethod
+    def contains_rect_vertically(lhs, rhs):
+        return lhs.top <= rhs.top and rhs.bottom <= lhs.bottom
 
 
 class Zombie(RMO):
@@ -140,9 +161,13 @@ class Dodge:
         pygame.display.flip()
 
         self.player = Player(initial_position=(int(SCREEN_RECT.width / 4) * 2, SCREEN_RECT.center[1]))
-        Zombie(initial_position=(int(SCREEN_RECT.width / 4), SCREEN_RECT.center[1]),
+        Zombie(initial_position=(int(SCREEN_RECT.width / 4), int(SCREEN_RECT.height / 4)),
                randomly_change_direction=move_zombies_randomly)
-        Zombie(initial_position=(int(SCREEN_RECT.width / 4) * 3, SCREEN_RECT.center[1]),
+        Zombie(initial_position=(int(SCREEN_RECT.width / 4) * 3, int(SCREEN_RECT.height / 4)),
+               randomly_change_direction=move_zombies_randomly)
+        Zombie(initial_position=(int(SCREEN_RECT.width / 4), int(SCREEN_RECT.height / 4) * 3),
+               randomly_change_direction=move_zombies_randomly)
+        Zombie(initial_position=(int(SCREEN_RECT.width / 4) * 3, int(SCREEN_RECT.height / 4) * 3),
                randomly_change_direction=move_zombies_randomly)
 
         self.clock = pygame.time.Clock()
