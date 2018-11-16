@@ -9,6 +9,10 @@ class Speedometer:
 
     def put(self):
         self.timestamps.append(self.now)
+        if len(self.timestamps) < 2:
+            return None
+        else:
+            return self.now - self.timestamps[-1]
 
     # noinspection PyAttributeOutsideInit
     def reset(self):

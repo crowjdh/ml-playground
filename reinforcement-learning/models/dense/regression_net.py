@@ -9,13 +9,13 @@ from models.regression_net import RegressionNet
 
 class DenseRegressionNet(RegressionNet):
     def __init__(self, session, env_id, input_dim, output_size, hidden_sizes=(16,),
-                 learning_rate=1e-3, use_bias=True, name='main', write_tensor_log=True):
+                 learning_rate=1e-3, use_bias=True, name='main', write_tensor_log=True, visualize=True):
         self.input_dim = input_dim
         self.output_size = output_size
         self.hidden_sizes = hidden_sizes
 
         super().__init__(session, env_id, learning_rate=learning_rate, use_bias=use_bias, name=name,
-                         write_tensor_log=write_tensor_log)
+                         write_tensor_log=write_tensor_log, visualize=visualize)
 
     def _create_input_tensors(self) -> Tuple[tf.Tensor, tf.Tensor]:
         states = tf.placeholder(tf.float32, [None, self.input_dim], name='states')

@@ -19,7 +19,7 @@ class ConvRegressionNet(RegressionNet):
             len(paddings) == len(filter_shapes)
     """
     def __init__(self, session, env_id, input_shape, filter_shapes, strides, paddings, hidden_sizes, output_size,
-                 learning_rate=1e-3, use_bias=True, name='main', write_tensor_log=True):
+                 learning_rate=1e-3, use_bias=True, name='main', write_tensor_log=True, visualize=True):
         self.input_shape = input_shape
         self.filter_shapes = filter_shapes
         self.strides = strides
@@ -29,7 +29,7 @@ class ConvRegressionNet(RegressionNet):
         # self.output_shape = self.calc_output_shape()
 
         super().__init__(session, env_id, learning_rate=learning_rate, use_bias=use_bias, name=name,
-                         write_tensor_log=write_tensor_log)
+                         write_tensor_log=write_tensor_log, visualize=visualize)
 
     def calc_output_shape(self):
         # noinspection PyShadowingNames
@@ -114,7 +114,9 @@ class ConvRegressionNet(RegressionNet):
             tf.summary.image('input_img', img, collections=[self.name])
             for f_idx in range(len(self.filter_shapes)):
                 layer, out = self.conv(out, f_idx, str(f_idx), activation=tf.nn.relu)
+
                 self.summarise_conv_layer(layer, str(f_idx))
+                self.collect_tf_objects(layer, out)
             out = tf.reshape(out, (-1, np.prod(out.shape[1:])))
             for h_idx, hidden_size in enumerate(self.hidden_sizes):
                 out = self.dense(out, hidden_size, str(h_idx), activation=tf.nn.relu)

@@ -166,3 +166,4 @@ resources/
 markdown-exported-files.xml
 **/.checkpoints/
 **/.replay/
+**/.tensor_visualizer/

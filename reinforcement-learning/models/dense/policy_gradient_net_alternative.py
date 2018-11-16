@@ -22,13 +22,13 @@ class PGNAlternative(PGN):
         log_lik_adv = log_lik * self._discounted_rewards
         return tf.reduce_mean(tf.reduce_sum(log_lik_adv, axis=1))
 
-    def _init_optimizer_tensor(self):
+    def _create_optimizer_tensor(self):
         with tf.name_scope('train'):
             optimizer = self._get_optimizer_type()
             self._loss_tensor = self._create_loss_tensor()
             self._global_step = tf.Variable(0, name='global_step', trainable=False)
 
-            self._optimizer_tensor = optimizer(learning_rate=self.learning_rate).minimize(
+            return optimizer(learning_rate=self.learning_rate).minimize(
                 self._loss_tensor, global_step=self._global_step, name='optimizer')
 
     def perform_policy_gradient_update(self, history):

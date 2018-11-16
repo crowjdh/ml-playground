@@ -20,6 +20,7 @@ def _parse_episode_range(episodes, start_idx, end_idx):
     return start_idx, end_idx
 
 
+# TODO: Replace logic for saving/loading numpy array with numpy_writer.py
 class ReplayManager:
     KEY_RESET = -1
 

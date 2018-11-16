@@ -33,7 +33,8 @@ class PGN(DenseRegressionNet):
     def _get_optimizer_type(self) -> Type[tf.train.Optimizer]:
         return tf.train.AdamOptimizer
 
-    def _init_optimizer_tensor(self):
+    # TODO: What you gotta do to collect gradient with TensorVisualizer?
+    def _create_optimizer_tensor(self):
         with tf.name_scope('train'):
             optimizer = self._get_optimizer_type()
             self._loss_tensor = self._create_loss_tensor()
@@ -42,7 +43,7 @@ class PGN(DenseRegressionNet):
             # Manually compute upward gradient rather then computing with fake label(y)
             # See: http://cs231n.github.io/optimization-2/#backprop
             self._gradient_loss = tf.placeholder(tf.float32, name='gradient_loss')
-            self._optimizer_tensor = optimizer(learning_rate=self.learning_rate).minimize(
+            return optimizer(learning_rate=self.learning_rate).minimize(
                 self._loss_tensor, global_step=self._global_step, grad_loss=self._gradient_loss, name='optimizer')
 
     def _create_fake_label(self, history):

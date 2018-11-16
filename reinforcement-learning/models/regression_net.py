@@ -3,11 +3,12 @@ from abc import ABC, abstractmethod
 from typing import *
 import tensorflow as tf
 from utils.functions import identity
+from models.tensor_visualizer import TensorVisualizer
 
 
 class RegressionNet(ABC):
     def __init__(self, session, env_id, learning_rate=1e-3, use_bias=True, name='main',
-                 write_tensor_log=True):
+                 write_tensor_log=True, visualize=True):
         self.session = session
         self.env_id = env_id
         self.learning_rate = learning_rate
@@ -15,6 +16,7 @@ class RegressionNet(ABC):
         self.name = name
 
         self.write_tensor_log = write_tensor_log
+        self.visualize = visualize
 
         self._build_graph()
         self._init_summaries()
@@ -33,7 +35,7 @@ class RegressionNet(ABC):
         with tf.name_scope(self.name):
             self._states, self._y = self._create_input_tensors()
             self._logit, self._activation_out = self._create_network(self._states)
-            self._init_optimizer_tensor()
+            self._optimizer_tensor = self._create_optimizer_tensor()
 
     @abstractmethod
     def _create_input_tensors(self) -> Tuple[tf.Tensor, tf.Tensor]:
@@ -58,18 +60,25 @@ class RegressionNet(ABC):
 
             return dense_out
 
+    def collect_tf_objects(self, layer, out):
+        if self.visualize:
+            TensorVisualizer.instance.add_layer(layer, out)
+
     # noinspection PyMethodMayBeStatic
     def _process_input(self, values):
         return values
 
-    def _init_optimizer_tensor(self):
+    def _create_optimizer_tensor(self):
         with tf.name_scope('train'):
             optimizer = self._get_optimizer_type()
 
             self._loss_tensor = self._create_loss_tensor()
             self._global_step = tf.Variable(0, name='global_step', trainable=False)
-            self._optimizer_tensor = optimizer(learning_rate=self.learning_rate).minimize(
-                self._loss_tensor, global_step=self._global_step)
+            optimizer_layer = optimizer(learning_rate=self.learning_rate)
+            grads_and_vars = optimizer_layer.compute_gradients(self._loss_tensor)
+            if self.visualize:
+                TensorVisualizer.instance.collect_gradients(grads_and_vars)
+            return optimizer_layer.apply_gradients(grads_and_vars, global_step=self._global_step)
 
     @abstractmethod
     def _create_loss_tensor(self) -> tf.Tensor:
@@ -109,16 +118,29 @@ class RegressionNet(ABC):
             tf.gfile.DeleteRecursively(self.log_dir_path)
         tf.gfile.MakeDirs(self.log_dir_path)
 
-    def predict(self, states):
-        states = self._process_input(states)
+    def run(self, tensors, states=None, probabilities=None):
+        feed_dict = self._create_feed_dict(states, probabilities=probabilities)
 
-        return self.session.run(self._activation_out, feed_dict={self._states: states})
+        return self.session.run(tensors, feed_dict=feed_dict)
+
+    def predict(self, states):
+        feed_dict = self._create_feed_dict(states)
+
+        return self.session.run(self._activation_out, feed_dict=feed_dict)
 
     def update(self, states, probabilities, feed_dict_processor=identity):
-        states = self._process_input(states)
+        if self.visualize:
+            TensorVisualizer.instance.expand_history()
+            TensorVisualizer.instance.cache_gradients(self, states, probabilities)
 
-        feed_dict = {self._states: states, self._y: probabilities}
-        # TODO: Check identity function works
+        self._update(states, probabilities, feed_dict_processor=feed_dict_processor)
+
+        if self.visualize:
+            TensorVisualizer.instance.cache_kernels(self)
+            TensorVisualizer.instance.cache_activations(self, states)
+
+    def _update(self, states, probabilities, feed_dict_processor=identity):
+        feed_dict = self._create_feed_dict(states, probabilities=probabilities)
         feed_dict = feed_dict_processor(feed_dict)
 
         params = [self._loss_tensor, self._optimizer_tensor, self._global_step]
@@ -129,3 +151,18 @@ class RegressionNet(ABC):
         else:
             loss, _, _ = self.session.run(params, feed_dict=feed_dict)
         return loss
+
+    def _create_feed_dict(self, states, probabilities=None):
+        are_invalid_inputs = states is None and probabilities is not None
+        assert not are_invalid_inputs
+
+        if states is not None and len(states) > 0:
+            states = self._process_input(states)
+            feed_dict = {self._states: states}
+
+            if probabilities is not None:
+                feed_dict[self._y] = probabilities
+        else:
+            feed_dict = None
+
+        return feed_dict

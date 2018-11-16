@@ -5,6 +5,7 @@ from collections import deque
 import ene
 from models.checkpoint import Checkpoint
 from models.dqn_mixin import DQNMixin
+from models.tensor_visualizer import TensorVisualizer
 from utils.functions import noop
 from utils.logger import Logger
 from learn.utils.progress_utils import ClearManager
@@ -49,7 +50,7 @@ def create_dense_networks(sess, env):
     main_dqn = DQN(sess, env.id, input_dim, output_dim, hidden_sizes=[32, 16],
                    learning_rate=1e-3, name='main')
     target_dqn = DQN(sess, env.id, input_dim, output_dim, hidden_sizes=[32, 16],
-                     learning_rate=1e-3, name='target', write_tensor_log=False)
+                     learning_rate=1e-3, name='target', write_tensor_log=False, visualize=False)
 
     return main_dqn, target_dqn
 
@@ -70,7 +71,7 @@ def create_conv_networks(sess, env):
     main_dqn = DQN(sess, env.id, env.state_shape, filters, strides, paddings, hidden_sizes, output_dim,
                    learning_rate=1e-4, name='main')
     target_dqn = DQN(sess, env.id, env.state_shape, filters, strides, paddings, hidden_sizes, output_dim,
-                     learning_rate=1e-4, name='target', write_tensor_log=False)
+                     learning_rate=1e-4, name='target', write_tensor_log=False, visualize=False)
 
     return main_dqn, target_dqn
 
@@ -80,6 +81,7 @@ def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode)
     clear_manager = ClearManager()
     replay_manager = ReplayManager(main_dqn.id, flush_frequency=CHECKPOINT_FREQUENCY)
     checkpoint = Checkpoint(sess, main_dqn.id, save_frequency=CHECKPOINT_FREQUENCY).load()
+    TensorVisualizer.instance.id = main_dqn.id
 
     select = ene.modes[ene_mode]
     possible_states = getattr(env, 'possible_states', None)

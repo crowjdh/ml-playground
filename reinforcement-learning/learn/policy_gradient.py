@@ -27,8 +27,6 @@ def train(env, episodes=50000, action_callback=noop):
 
         with network:
             _train(network, env, episodes, action_callback)
-        pass
-    pass
 
 
 def _train(network, env, episodes, action_callback):
