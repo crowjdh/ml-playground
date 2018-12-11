@@ -132,6 +132,8 @@ class ConvRegressionNet(RegressionNet):
     def _process_input(self, values):
         if len(values.shape) == 3:
             values = values[np.newaxis]
+        values = (values - values.mean()) / values.std()
+
         return values
 
     @abstractmethod
