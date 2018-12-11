@@ -158,13 +158,13 @@ class TensorVisualizer(metaclass=Singleton):
         numpy_writer.append_arrays(self.history, self.visualizer_dir_path, visualizer_file_name)
         self.history = []
 
-    def load_histories(self, from_index=None, to_index=None):
-        snapshot_numbers = self.snapshot_numbers
+    def load_histories(self, snapshot_indices):
+        snapshot_numbers = np.asarray(self.snapshot_numbers)
+        snapshot_indices = np.asarray(snapshot_indices)
 
-        from_index = 0 if from_index is None else from_index
-        to_index = len(snapshot_numbers) if to_index is None else to_index
-        from_index, to_index = max(from_index, 0), min(to_index, len(snapshot_numbers))
-        return [self.load_history(snapshot_number)[0] for snapshot_number in snapshot_numbers[from_index:to_index]]
+        snapshot_numbers = snapshot_numbers[snapshot_indices]
+
+        return [self.load_history(snapshot_number)[0] for snapshot_number in snapshot_numbers]
 
     def load_history(self, snapshot_idx):
         visualizer_file_name = '{}_{}'.format(self.visualizer_file_name, snapshot_idx)

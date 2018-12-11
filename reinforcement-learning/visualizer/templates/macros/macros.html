@@ -38,22 +38,11 @@
 
 {% macro show_layers(all_images, snapshot_numbers, snapshot_idx, image_indices, img_idx,
                      layer_indices, layer_names, layer_name) %}
-  {% set snapshot_number = snapshot_idx + 1 %}
+  {% set snapshot_number = snapshot_numbers[snapshot_idx] %}
   <div id="images">
-    {# <script type="text/javascript">
-      function keyDownListener(event) {
-        document.removeEventListener('keydown', keyDownListener);
-        if(event.keyCode == 37) {
-          load_images({{ snapshot_number - 1 }}, {{ img_idx }}, {{ layer_name }})
-        } else if(event.keyCode == 39) {
-          load_images({{ snapshot_number + 1 }}, {{ img_idx }}, {{ layer_name }})
-        }
-      }
-      document.addEventListener('keydown', keyDownListener);
-    </script> #}
     <h4>Visualizer {{ snapshot_number }}, Image {{ img_idx }}, {{ layer_name }}</h4>
     <div>
-      Snapshots: 
+      Snapshots:
       {% for snapshot_number_item in snapshot_numbers %}
         {{ button(snapshot_number_item, img_idx, layer_name, snapshot_number_item,
                   disabled=snapshot_number_item == snapshot_number) }}

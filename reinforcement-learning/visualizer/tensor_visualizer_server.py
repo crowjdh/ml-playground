@@ -63,27 +63,17 @@ def parse_arguments(all_images, layer_info, snapshot_numbers, snapshot_number):
     return snapshot_idx, arg_img_idx, layer_name, image_indices, layer_indices, layer_names
 
 
-def parse_snapshot_range(snapshot_numbers):
-    arg_snapshot_number_from = request.args.get('snapshot_from') or snapshot_numbers[0]
-    arg_snapshot_number_to = request.args.get('snapshot_to') or snapshot_numbers[-1]
+def get_snapshot_indices(snapshot_numbers, count=10, add_last_snapshot=True):
+    length = len(snapshot_numbers)
+    unit = round(length / count)
 
-    # noinspection PyBroadException
-    def _index(arr, element, default=None):
-        try:
-            return arr.index(element)
-        except:
-            return default
+    indices = [i for i in range(0, length, unit)]
 
-    def index_or_first(arr, element):
-        return _index(arr, element, 0)
+    last_possible_idx = length - 1
+    if add_last_snapshot and last_possible_idx > indices[-1]:
+        indices.append(last_possible_idx)
 
-    def index_or_last(arr, element):
-        return _index(arr, element, len(arr))
-
-    arg_snapshot_idx_from = index_or_first(snapshot_numbers, int(arg_snapshot_number_from))
-    arg_snapshot_idx_to = index_or_last(snapshot_numbers, int(arg_snapshot_number_to))
-
-    return arg_snapshot_idx_from, arg_snapshot_idx_to + 1
+    return np.asarray(indices)
 
 
 def load_images(dir_name):
@@ -92,11 +82,11 @@ def load_images(dir_name):
         return all_images_dict[dir_name]
 
     TensorVisualizer.instance.id = dir_name
-    snapshot_numbers = TensorVisualizer.instance.snapshot_numbers
+    snapshot_numbers = np.asarray(TensorVisualizer.instance.snapshot_numbers)
+    snapshot_indices = get_snapshot_indices(snapshot_numbers)
+    snapshot_numbers = snapshot_numbers[snapshot_indices].tolist()
 
-    arg_snapshot_idx_from, arg_snapshot_idx_to = parse_snapshot_range(snapshot_numbers)
-    histories = TensorVisualizer.instance.load_histories(from_index=arg_snapshot_idx_from, to_index=arg_snapshot_idx_to)
-    snapshot_numbers = TensorVisualizer.instance.snapshot_numbers[arg_snapshot_idx_from:arg_snapshot_idx_to]
+    histories = TensorVisualizer.instance.load_histories(snapshot_indices=snapshot_indices)
     layer_info = TensorVisualizer.instance.layer_info
 
     all_images = []
