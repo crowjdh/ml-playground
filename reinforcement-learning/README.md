@@ -15,7 +15,7 @@ I used my own implementation of FrozenLake environment(env.py) instead of OpenAI
   - [ ] Stochastic
 
 ## Usage ##
-#### Train ####
+### Train ###
 ```
 # python main.py -h
 usage: main.py [-h] [-i] [--env_mode {d,s}] [--train {q,dqn,pg}]
@@ -30,7 +30,7 @@ optional arguments:
 Interactive mode shows you what's going on inside the training session.\
 ![interactive_mode](images/interactive_mode.png)
 
-#### Visualize ####
+### Visualize ###
 Visualizer shows kernels, gradients and activations for each layers.
 Run the command below and open http://localhost:5000/DodgeEnv_d_centered_ConvDQN on your browser.
 (Currently supports dqn only)
