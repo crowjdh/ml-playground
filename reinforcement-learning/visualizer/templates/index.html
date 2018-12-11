@@ -1,0 +1,37 @@
+{% from 'macros/macros.html' import show_layers %}
+
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}{{ dir_name }}{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  <script type="text/javascript">
+    function showOverlay(img) {
+      $("#overlay").append("<img src=\"data:image/png;base64, " + img + "\">")
+      document.getElementById("overlay").style.display = "flex";
+    }
+
+    function hideOverlay() {
+      document.getElementById("overlay").style.display = "none";
+      $("#overlay").empty();
+    }
+
+    function load_images(snapshot_number, image_index, layer_name) {
+      if (image_index === undefined) {
+        image_index = 0;
+      }
+      $.ajax({
+        url: "/{{ dir_name }}/" + snapshot_number + "/images?layer=" + layer_name + "&img_idx=" + image_index,
+        success: function(result) {
+          $("#images").empty();
+          $("#images").html(result);
+        }
+      });
+    }
+  </script>
+  <div id="overlay" onclick="hideOverlay()"></div>
+  {{ show_layers(all_images, snapshot_numbers, snapshot_idx, image_indices, img_idx,
+                 layer_indices, layer_names, layer_name) }}
+{% endblock %}

@@ -58,11 +58,15 @@ class RegressionNet(ABC):
             if self.use_bias:
                 tf.summary.histogram('bias_' + desc, dense_layer.bias, collections=[self.name])
 
-            return dense_out
+            return dense_layer, dense_out
 
-    def collect_tf_objects(self, layer, out):
+    def collect_dense_layer_tensors(self, layer, activation):
         if self.visualize:
-            TensorVisualizer.instance.add_layer(layer, out)
+            TensorVisualizer.instance.add_dense_layer(layer, activation)
+
+    def collect_conv_layer_tensors(self, layer, activation):
+        if self.visualize:
+            TensorVisualizer.instance.add_conv_layer(layer, activation)
 
     # noinspection PyMethodMayBeStatic
     def _process_input(self, values):
@@ -123,6 +127,11 @@ class RegressionNet(ABC):
 
         return self.session.run(tensors, feed_dict=feed_dict)
 
+    @property
+    def gradient_of_input_wrt_activation(self):
+        grad_tensor = tf.gradients(self._activation_out, self._states)
+        return grad_tensor[0]
+
     def predict(self, states):
         feed_dict = self._create_feed_dict(states)
 
@@ -130,7 +139,8 @@ class RegressionNet(ABC):
 
     def update(self, states, probabilities, feed_dict_processor=identity):
         if self.visualize:
-            TensorVisualizer.instance.expand_history()
+            TensorVisualizer.instance.cache_inputs(states)
+            TensorVisualizer.instance.cache_input_gradients(self, states)
             TensorVisualizer.instance.cache_gradients(self, states, probabilities)
 
         self._update(states, probabilities, feed_dict_processor=feed_dict_processor)
@@ -138,6 +148,8 @@ class RegressionNet(ABC):
         if self.visualize:
             TensorVisualizer.instance.cache_kernels(self)
             TensorVisualizer.instance.cache_activations(self, states)
+
+            TensorVisualizer.instance.pack_cache()
 
     def _update(self, states, probabilities, feed_dict_processor=identity):
         feed_dict = self._create_feed_dict(states, probabilities=probabilities)

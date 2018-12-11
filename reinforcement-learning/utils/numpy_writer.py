@@ -8,13 +8,13 @@ import numpy as np
 tmp_file_extension = 'tmp'
 
 
-def append_data(data, dir_path, file_name):
+def append_arrays(data, dir_path, file_name):
     _prepare_tmp_file(dir_path, file_name)
     _append_into_tmp_file(data, dir_path, file_name)
     _replace_with_tmp_files(dir_path, file_name)
 
 
-def load_data(dir_path, file_name):
+def load_arrays(dir_path, file_name):
     file_path = _file_path(dir_path, file_name)
     if not os.path.isfile(file_path):
         return None

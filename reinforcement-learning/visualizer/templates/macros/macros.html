@@ -1,0 +1,114 @@
+{% macro add_layer(layer_name, images, group_size) %}
+  {% set has_means = 'means' in kwargs %}
+  {% if has_means %}
+    {% set mean_info_list = kwargs['means'] %}
+  {% endif %}
+  <div class="float_left" style="width: 200px">
+    <p>{{ layer_name }}</p>
+    {% for image in images %}
+      {% set group_idx = (loop.index0 / group_size)|int %}
+
+      {% if loop.index0 % group_size == 0 %}
+        <div class="image_box">
+      {% endif %}
+
+      <img src="data:image/png;base64, {{ image }}" class="layer transparent_outline" onclick=showOverlay("{{ image }}");>
+
+      {% if loop.index0 % group_size == group_size - 1 %}
+        {% if has_means %}
+          {% for mean_info in mean_info_list %}
+            {% if mean_info[0] %}{{ mean_info[0] }}: {% endif %}{{ mean_info[1][group_idx] }}
+            <!-- <div class="float_bottom" style="bottom: 10px;">
+              {% if mean_info[0] %}{{ mean_info[0] }}: {% endif %}{{ mean_info[1][group_idx] }}
+            </div> -->
+          {% endfor %}
+        {% endif %}
+          <hr class="float_bottom">
+        </div>
+      {% endif %}
+
+    {% endfor %}
+  </div>
+{% endmacro %}
+
+{% macro button(snapshot_number, img_idx, layer_name, text, disabled=False) %}
+  <button onclick="load_images({{ snapshot_number }}, {{ img_idx }}, '{{ layer_name }}');"
+          {% if disabled %} disabled {% endif %}>{{ text }}</button>
+{% endmacro%}
+
+{% macro show_layers(all_images, snapshot_numbers, snapshot_idx, image_indices, img_idx,
+                     layer_indices, layer_names, layer_name) %}
+  {% set snapshot_number = snapshot_idx + 1 %}
+  <div id="images">
+    {# <script type="text/javascript">
+      function keyDownListener(event) {
+        document.removeEventListener('keydown', keyDownListener);
+        if(event.keyCode == 37) {
+          load_images({{ snapshot_number - 1 }}, {{ img_idx }}, {{ layer_name }})
+        } else if(event.keyCode == 39) {
+          load_images({{ snapshot_number + 1 }}, {{ img_idx }}, {{ layer_name }})
+        }
+      }
+      document.addEventListener('keydown', keyDownListener);
+    </script> #}
+    <h4>Visualizer {{ snapshot_number }}, Image {{ img_idx }}, {{ layer_name }}</h4>
+    <div>
+      Snapshots: 
+      {% for snapshot_number_item in snapshot_numbers %}
+        {{ button(snapshot_number_item, img_idx, layer_name, snapshot_number_item,
+                  disabled=snapshot_number_item == snapshot_number) }}
+      {% endfor %}
+    </div>
+    <div>
+      Image idx:
+      {% for img_idx_item in image_indices %}
+        {{ button(snapshot_number, img_idx_item, layer_name, img_idx_item, disabled=img_idx_item == img_idx) }}
+      {% endfor %}
+    </div>
+    <div>
+      Kernels:
+      {% for layer_name_item in layer_names %}
+        {{ button(snapshot_number, img_idx, layer_name_item, layer_name_item, disabled=layer_name_item == layer_name) }}
+      {% endfor %}
+    </div>
+
+    <div style="display: flex">
+      {% set input_images, input_gradients, layer_images = all_images[snapshot_idx] %}
+      {% set input_images, input_gradients = input_images[img_idx:img_idx+1], input_gradients[img_idx:img_idx+1] %}
+
+      <div class="float_left" style="width: 100px">
+        <p>layer</p>
+        {% for input_image in input_images %}
+          <img src="data:image/png;base64, {{ input_image }}" class="layer{#  outline #}" onclick=showOverlay("{{ input_image }}");>
+        {% endfor %}
+        {% for input_gradient in input_gradients %}
+          <img src="data:image/png;base64, {{ input_gradient }}" class="layer{#  outline #}" onclick=showOverlay("{{ input_gradient }}");>
+        {% endfor %}
+      </div>
+      
+      {% for all_layer_images in layer_images %}
+        {% if loop.index0 not in layer_indices %}
+          {% continue %}
+        {% endif %}
+        {% set conv_kernel_info, activation_info, gradient_info = all_layer_images %}
+
+        {% set conv_kernel_images, conv_means, kernel_group_size = conv_kernel_info %}
+        {% set activation_images, activation_means, activation_group_size = activation_info %}
+        {% set gradient_images, gradient_means, kernel_group_size = gradient_info %}
+
+        {% set activation_images, activation_means = activation_images[img_idx], activation_means[img_idx] %}
+        {% set gradient_images, gradient_means = gradient_images[img_idx], gradient_means[img_idx] %}
+
+        <div class="layer float_left">
+          {{ add_layer('Kernels', conv_kernel_images, kernel_group_size,
+                       means=[(None, conv_means)]) }}
+          {{ add_layer('Gradients', gradient_images, kernel_group_size,
+                       means=[(None, gradient_means)]) }}
+          {{ add_layer('Activations', activation_images, activation_group_size,
+                       means=[(None, activation_means)]) }}
+
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+{% endmacro %}

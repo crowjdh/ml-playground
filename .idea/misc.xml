@@ -13,4 +13,7 @@
     </wildcardResourcePatterns>
   </component>
   <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.6 (ml)" project-jdk-type="Python SDK" />
+  <component name="PyCharmProfessionalAdvertiser">
+    <option name="shown" value="true" />
+  </component>
 </project>

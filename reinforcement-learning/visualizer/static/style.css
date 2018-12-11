@@ -1,0 +1,57 @@
+img.layer {
+     width: 50px;
+}
+
+div.float_left {
+    float: left;
+}
+
+div.layer {
+    width: 600px;
+}
+
+img.outline {
+    border: 2px solid;
+}
+
+img.transparent_outline {
+    border: 2px solid transparent;
+}
+
+#overlay {
+    position: fixed;
+    display: none;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(1,1,1,0.5);
+    z-index: 2;
+    cursor: pointer;
+    
+    align-items: center;
+    justify-content: center;
+}
+
+/* Kept for later use */
+/*
+img.layer {
+     width: 20px;
+     height: 20px;
+}
+
+div.image_box {
+    position: relative;
+    min-height: 150px;
+}
+
+.float_bottom {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  margin: 0;
+}
+*/

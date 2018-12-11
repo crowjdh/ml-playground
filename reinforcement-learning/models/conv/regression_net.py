@@ -116,14 +116,16 @@ class ConvRegressionNet(RegressionNet):
                 layer, out = self.conv(out, f_idx, str(f_idx), activation=tf.nn.relu)
 
                 self.summarise_conv_layer(layer, str(f_idx))
-                self.collect_tf_objects(layer, out)
+                self.collect_conv_layer_tensors(layer, out)
             out = tf.reshape(out, (-1, np.prod(out.shape[1:])))
             for h_idx, hidden_size in enumerate(self.hidden_sizes):
-                out = self.dense(out, hidden_size, str(h_idx), activation=tf.nn.relu)
-            logit = self.dense(out, self.output_size, str(len(self.hidden_sizes)))
+                layer, out = self.dense(out, hidden_size, str(h_idx), activation=tf.nn.relu)
+                self.collect_dense_layer_tensors(layer, out)
+            layer, logit = self.dense(out, self.output_size, str(len(self.hidden_sizes)))
 
         act = self.activation
         activation_out = act(logit) if callable(act) else logit
+        self.collect_dense_layer_tensors(layer, activation_out)
 
         return logit, activation_out
 

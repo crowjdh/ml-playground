@@ -82,6 +82,7 @@ def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode)
     replay_manager = ReplayManager(main_dqn.id, flush_frequency=CHECKPOINT_FREQUENCY)
     checkpoint = Checkpoint(sess, main_dqn.id, save_frequency=CHECKPOINT_FREQUENCY).load()
     TensorVisualizer.instance.id = main_dqn.id
+    TensorVisualizer.instance.setup()
 
     select = ene.modes[ene_mode]
     possible_states = getattr(env, 'possible_states', None)
@@ -112,6 +113,7 @@ def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode)
 
             if len(replay_memory) > BATCH_SIZE:
                 DQNMixin.replay_train(main_dqn, target_dqn, replay_memory, DISCOUNT_RATE, minibatch_size=BATCH_SIZE)
+                TensorVisualizer.instance.save_history()
             if env.steps % TARGET_UPDATE_FREQUENCY == 0:
                 sess.run(copy_operations)
 

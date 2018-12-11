@@ -26,8 +26,8 @@ class DenseRegressionNet(RegressionNet):
     def _create_network(self, out) -> Tuple[tf.Tensor, tf.Tensor]:
         with tf.variable_scope(self.name):
             for h_idx, hidden_size in enumerate(self.hidden_sizes):
-                out = self.dense(out, hidden_size, str(h_idx), activation=tf.nn.relu)
-            logit = self.dense(out, self.output_size, str(len(self.hidden_sizes)))
+                _, out = self.dense(out, hidden_size, str(h_idx), activation=tf.nn.relu)
+            _, logit = self.dense(out, self.output_size, str(len(self.hidden_sizes)))
 
         act = self.activation
         activation_out = act(logit) if callable(act) else logit

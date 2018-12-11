@@ -1,10 +1,15 @@
 import os
 from abc import ABC, abstractmethod
+from enum import Enum
+import pathlib
+
+import numpy as np
 
 from utils import numpy_writer
 from utils.singleton import Singleton
 
 VISUALIZER_ROOT_DIR_PATH = '.tensor_visualizer'
+LAYER_INFO_SEPARATOR = ','
 
 
 def _create_id(network, infix, idx):
@@ -17,9 +22,65 @@ class TensorVisualizer(metaclass=Singleton):
         self.root_tensor_node = None
         self.current_tensor_node = None
         self.history = []
+        self.save_for_every_n_updates = 300
+        self.update_item_count = 5
+        self._update_count = 0
+        self._tensor_history_cache = None
+        self._inputs_cache = None
+        self._input_gradients_cache = None
 
-    def add_layer(self, layer, activation):
-        new_node = TensorNode(layer, activation)
+    def setup(self):
+        self._restore_update_count()
+        self._save_layer_info()
+
+    def _restore_update_count(self):
+        snapshot_numbers = self.snapshot_numbers
+        if not os.path.isdir(self.visualizer_dir_path) or len(snapshot_numbers) == 0:
+            return
+        last_snapshot_number = max(*self.snapshot_numbers)
+        self._update_count = self.save_for_every_n_updates * last_snapshot_number
+
+    def _save_layer_info(self):
+        pathlib.Path(self.visualizer_dir_path).mkdir(parents=True, exist_ok=True)
+        if os.path.isfile(self.layer_info_file_path):
+            return
+
+        layer_names = [layer_type.value for layer_type in self.root_tensor_node.layer_types]
+        with open(self.layer_info_file_path, 'w') as layer_info_file:
+            layer_info_file.write(LAYER_INFO_SEPARATOR.join(layer_names))
+
+    @property
+    def snapshot_numbers(self):
+        snapshot_numbers = []
+        for file_path in os.listdir(self.visualizer_dir_path):
+            try:
+                snapshot_number_idx = file_path.rindex(self.visualizer_file_name) + len(self.visualizer_file_name)
+                snapshot_number = int(file_path[snapshot_number_idx+1:])
+                snapshot_numbers.append(snapshot_number)
+            except ValueError:
+                continue
+
+        snapshot_numbers.sort()
+        return snapshot_numbers
+
+    @property
+    def layer_info(self):
+        if not os.path.exists(self.layer_info_file_path):
+            return None
+
+        with open(self.layer_info_file_path, 'r') as layer_info_file:
+            layer_info_contents = layer_info_file.read()
+            layer_names = layer_info_contents.split(LAYER_INFO_SEPARATOR)
+            return [TensorNode.Layer(layer_name) for layer_name in layer_names]
+
+    def add_dense_layer(self, layer, activation):
+        self._add_layer(layer, activation, TensorNode.Layer.DENSE)
+
+    def add_conv_layer(self, layer, activation):
+        self._add_layer(layer, activation, TensorNode.Layer.CONV)
+
+    def _add_layer(self, layer, activation, layer_type):
+        new_node = TensorNode(layer, activation, layer_type)
         if self.root_tensor_node is None:
             self.root_tensor_node = new_node
         else:
@@ -33,33 +94,116 @@ class TensorVisualizer(metaclass=Singleton):
             node.gradient = vars_and_grads[node.layer.kernel]
         self.root_tensor_node.traverse(action)
 
-    def expand_history(self):
-        self.history.append([])
+    def cache_inputs(self, inputs):
+        if not self._should_save_history():
+            return
+
+        # TODO: Should I cache preprocessed inputs?
+        inputs = inputs[:self.update_item_count]
+        self._inputs_cache = inputs[:self.update_item_count]
+
+    def cache_input_gradients(self, network, inputs):
+        if not self._should_save_history():
+            return
+
+        inputs = inputs[:self.update_item_count]
+        grad_tensor = network.gradient_of_input_wrt_activation
+
+        self._input_gradients_cache = network.run(grad_tensor, states=inputs)
 
     def cache_gradients(self, network, inputs, y):
-        gradients = network.run(self.root_tensor_node.gradients, states=inputs, probabilities=y)
-        self._cache_value(gradients)
+        if not self._should_save_history():
+            return
+
+        inputs = inputs[:self.update_item_count]
+        y = y[:self.update_item_count]
+
+        layer_cnt = self.root_tensor_node.length
+        input_cnt = len(inputs)
+        all_gradients = [[] for _ in range(layer_cnt)]
+
+        for idx in range(input_cnt):
+            lhs = inputs[idx:idx + 1]
+            rhs = y[idx:idx + 1]
+            gradients = network.run(self.root_tensor_node.gradients, states=lhs, probabilities=rhs)
+            for layer_idx in range(len(gradients)):
+                all_gradients[layer_idx].append(gradients[layer_idx])
+        all_gradients = [np.asarray(gradients) for gradients in all_gradients]
+
+        self._cache_value(all_gradients)
 
     def cache_kernels(self, network):
+        if not self._should_save_history():
+            return
+
         kernels = network.run(self.root_tensor_node.kernels)
         self._cache_value(kernels)
 
     def cache_activations(self, network, inputs):
+        if not self._should_save_history():
+            return
+
+        inputs = inputs[:self.update_item_count]
+
         conv_activations = network.run(self.root_tensor_node.activations, states=inputs)
         self._cache_value(conv_activations)
 
     def save_history(self):
-        numpy_writer.append_data(self.history, self.visualizer_dir_path, self.visualizer_file_name)
-        # TODO: Enable below after validation
-        # self.history = []
+        self._update_count += 1
+        if not self._should_save_history():
+            return
 
-    def load_history(self):
-        # TODO: Toggle after validation
-        # self.history = numpy_writer.load_data(self.visualizer_dir_path, self.visualizer_file_name)
-        return numpy_writer.load_data(self.visualizer_dir_path, self.visualizer_file_name)
+        visualizer_file_name = '{}_{}'.format(self.visualizer_file_name, self._history_index)
+
+        numpy_writer.append_arrays(self.history, self.visualizer_dir_path, visualizer_file_name)
+        self.history = []
+
+    def load_histories(self, from_index=None, to_index=None):
+        snapshot_numbers = self.snapshot_numbers
+
+        from_index = 0 if from_index is None else from_index
+        to_index = len(snapshot_numbers) if to_index is None else to_index
+        from_index, to_index = max(from_index, 0), min(to_index, len(snapshot_numbers))
+        return [self.load_history(snapshot_number)[0] for snapshot_number in snapshot_numbers[from_index:to_index]]
+
+    def load_history(self, snapshot_idx):
+        visualizer_file_name = '{}_{}'.format(self.visualizer_file_name, snapshot_idx)
+
+        self.history = numpy_writer.load_arrays(self.visualizer_dir_path, visualizer_file_name)
+        return self.history
 
     def _cache_value(self, value):
-        self.history[-1].append(value)
+        if self._tensor_history_cache is None:
+            self._tensor_history_cache = []
+        self._tensor_history_cache.append(value)
+
+    def pack_cache(self):
+        if not self._should_save_history():
+            return
+
+        layers = self.collect_layer_values()
+        self.history.append([self._inputs_cache, self._input_gradients_cache, layers])
+
+        self._tensor_history_cache = None
+        self._inputs_cache = None
+        self._input_gradients_cache = None
+
+    def collect_layer_values(self):
+        layers = []
+        for layer_idx in range(self.root_tensor_node.length):
+            layer = []
+            for type_idx in range(len(self._tensor_history_cache)):
+                layer.append(self._tensor_history_cache[type_idx][layer_idx])
+            layers.append(layer)
+
+        return layers
+
+    def _should_save_history(self):
+        return self._update_count % self.save_for_every_n_updates == 0
+
+    @property
+    def _history_index(self):
+        return int(self._update_count / self.save_for_every_n_updates) if self._should_save_history() else -1
 
     @property
     def id(self):
@@ -77,24 +221,9 @@ class TensorVisualizer(metaclass=Singleton):
     def visualizer_file_name(self):
         return 'visualizer'
 
-    # TODO: Remove after validation
-    # def pack_into_history(self):
-    #     self.history.append(self.root_tensor_node.all_values)
-
-    # def plot_conv_weights(self, network):
-    #     kernels = network.run(self.root_tensor_node.kernels)
-    #     for i, kernel in enumerate(kernels):
-    #         conviz.plot_conv_weights(kernel, _create_id(network, i, 'kernel'))
-    #
-    # def plot_conv_output(self, network, inputs):
-    #     conv_activations = network.run(self.root_tensor_node.activations, inputs)
-    #     for i, conv_activation in enumerate(conv_activations):
-    #         conviz.plot_conv_output(conv_activation, _create_id(network, i, 'activation'))
-    #
-    # def plot_gradients(self, network, states, y):
-    #     for gradient_tensor in self.root_tensor_node.gradients:
-    #         gradient = network.run(gradient_tensor, states, y)
-    #         print(gradient)
+    @property
+    def layer_info_file_path(self):
+        return os.path.join(self.visualizer_dir_path, 'layer_info')
 
 
 class Node(ABC):
@@ -119,6 +248,18 @@ class Node(ABC):
     def is_leaf(self):
         return self.next is None
 
+    @property
+    def length(self):
+        _length = 0
+
+        def collector(_):
+            nonlocal _length
+            _length += 1
+
+        self.traverse(collector)
+
+        return _length
+
     def traverse(self, action):
         current = self
         while current is not None:
@@ -136,12 +277,21 @@ class Node(ABC):
 
 
 class TensorNode(Node):
-    def __init__(self, layer, activation):
+    class Layer(Enum):
+        DENSE = 'dense'
+        CONV = 'conv'
+
+        @classmethod
+        def values(cls):
+            return [layer.value for layer in cls]
+
+    def __init__(self, layer, activation, layer_type):
         super(TensorNode, self).__init__()
 
         self.layer = layer
         self.activation = activation
         self.gradient = None
+        self.layer_type = layer_type
 
     @property
     def values(self):
@@ -162,3 +312,7 @@ class TensorNode(Node):
     @property
     def gradients(self):
         return self.collect(lambda node: node.gradient)
+
+    @property
+    def layer_types(self):
+        return self.collect(lambda node: node.layer_type)
