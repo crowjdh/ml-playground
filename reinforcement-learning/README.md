@@ -1,6 +1,8 @@
 ## What this is ##
 
-This section illustrates several reinforcement learning techniques with comments explaining implementation details. Most of the ideas are from [here](#credits--references). I used my own implementation of FrozenLake environment(env.py) instead of OpenAI Gym to illustrate the entire situation more complehensively and add some tweaks to make model converge.
+This section illustrates several reinforcement learning techniques with comments explaining implementation details.
+Most of the ideas are from [here](#credits--references).
+I used my own implementation of FrozenLake environment(env.py) instead of OpenAI Gym to illustrate the entire situation more comprehensively and add some tweaks to make model converge.
 
 ### Milestones ###
 
@@ -13,6 +15,7 @@ This section illustrates several reinforcement learning techniques with comments
   - [ ] Stochastic
 
 ## Usage ##
+#### Train ####
 ```
 # python main.py -h
 usage: main.py [-h] [-i] [--env_mode {d,s}] [--train {q,dqn,pg}]
@@ -24,8 +27,21 @@ optional arguments:
   --train {q,dqn,pg}  Training method
 ```
 
-Interactive mode shows you what's going on inside the training session.
-![preview](images/interactive_mode.png)
+Interactive mode shows you what's going on inside the training session.\
+![interactive_mode](images/interactive_mode.png)
+
+#### Visualize ####
+Visualizer shows kernels, gradients and activations for each layers.
+Run the command below and open http://localhost:5000/DodgeEnv_d_centered_ConvDQN on your browser.
+(Currently supports dqn only)
+
+```
+# python visualizer_server.py
+```
+
+![visualizer 1](images/visualizer_01.png)\
+![visualizer 2](images/visualizer_02.png)\
+![visualizer 3](images/visualizer_03.png)
 
 ## Credits & References ##
 - Sung Kim's RL lecture
