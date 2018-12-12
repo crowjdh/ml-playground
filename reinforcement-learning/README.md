@@ -31,13 +31,24 @@ Interactive mode shows you what's going on inside the training session.\
 ![interactive_mode](images/interactive_mode.png)
 
 ### Visualize ###
-Visualizer shows kernels, gradients and activations for each layers.
-Run the command below and open http://localhost:5000/DodgeEnv_d_centered_ConvDQN on your browser.
-(Currently supports dqn only)
-
 ```
 # python visualizer_server.py
 ```
+
+Visualizer shows kernels, gradients and activations for each layers per snapshot.
+Run the command above and open http://localhost:5000/[NETWORK_ID] on your browser. It will take a while, so be patient.
+Once it's loaded, you can easily navigate through each snapshots, inputs, and kernel types of the network by clicking each snapshot buttons.
+
+Each layers are represented with 3 columns(kernels, gradients, and activations).
+Images are normalized to show how significant each images(filters/gradients/activations) are, respect to columns they're in(kernel, gradient, activation). Numbers on the right shows mean values for each filters/kernels. Click each image to see in detail.
+
+The architecture used for the preview images below is:
+- Convolution 1:  16 8x8x1 filters
+- Convolution 2:  32 4x4x16 filters
+- Dense 1:        3200x256 kernel
+- Dense 2:        256x4 kernel
+
+Visualizer currently only supports dqn.
 
 ![visualizer 1](images/visualizer_01.png)\
 ![visualizer 2](images/visualizer_02.png)\
@@ -52,6 +63,9 @@ Run the command below and open http://localhost:5000/DodgeEnv_d_centered_ConvDQN
   - Presentation: https://www.youtube.com/watch?v=tqrcjHuNdmQ&t=1403s
   - Explanation Post: http://karpathy.github.io/2016/05/31/rl/
   - Source: https://gist.github.com/karpathy/a4166c7fe253700972fcbc77e4ea32c5
+
+- Playing Atari with Deep Reinforcement Learning
+  - Paper: https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf
 
 ## Contributions ##
 Contributions in any shape or form will be welcomed 🤘
