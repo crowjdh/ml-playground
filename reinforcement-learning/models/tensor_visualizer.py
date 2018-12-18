@@ -52,6 +52,9 @@ class TensorVisualizer(metaclass=Singleton):
     @property
     def snapshot_numbers(self):
         snapshot_numbers = []
+        if not os.path.isdir(self.visualizer_dir_path):
+            return snapshot_numbers
+
         for file_path in os.listdir(self.visualizer_dir_path):
             try:
                 snapshot_number_idx = file_path.rindex(self.visualizer_file_name) + len(self.visualizer_file_name)

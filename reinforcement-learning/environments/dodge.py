@@ -39,9 +39,9 @@ class DodgeEnv(Dodge, Environment):
 
         state = self.frame
         done = len(collided_zombies) > 0
-        reward = 0 if not done else -1000
-        # TODO: Compare which one works better
-        # reward = 0 if not done else -1
+        reward = 0.1 if not done else -1
+        if self.reward_processor:
+            reward = self.reward_processor(action, state, reward, done)
         self.steps += 1
 
         if self.steps > self.threshold * 2:

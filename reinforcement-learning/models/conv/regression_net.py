@@ -110,12 +110,9 @@ class ConvRegressionNet(RegressionNet):
 
     def _create_network(self, out) -> Tuple[tf.Tensor, tf.Tensor]:
         with tf.variable_scope(self.name):
-            img = tf.transpose(out[0:1], [0, 2, 1, 3])
-            tf.summary.image('input_img', img, collections=[self.name])
             for f_idx in range(len(self.filter_shapes)):
                 layer, out = self.conv(out, f_idx, str(f_idx), activation=tf.nn.relu)
 
-                self.summarise_conv_layer(layer, str(f_idx))
                 self.collect_conv_layer_tensors(layer, out)
             out = tf.reshape(out, (-1, np.prod(out.shape[1:])))
             for h_idx, hidden_size in enumerate(self.hidden_sizes):
