@@ -29,8 +29,8 @@ class Checkpoint:
     def next_episode(self):
         return self.sess.run(self.episode_tensor) + 1
 
-    def save(self, episode):
-        if episode % self.save_frequency == 0:
+    def save(self, episode, force=False):
+        if episode % self.save_frequency == 0 or force:
             self.sess.run(self.episode_tensor.assign(episode))
             self.saver.save(self.sess, self.checkpoint_file)
 

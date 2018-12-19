@@ -8,10 +8,25 @@ import numpy as np
 tmp_file_extension = 'tmp'
 
 
+def save_array(data, dir_path, file_name):
+    _prepare_tmp_file(dir_path, file_name)
+    _save_into_tmp_file(data, dir_path, file_name)
+    _replace_with_tmp_files(dir_path, file_name)
+
+
 def append_arrays(data, dir_path, file_name):
     _prepare_tmp_file(dir_path, file_name)
     _append_into_tmp_file(data, dir_path, file_name)
     _replace_with_tmp_files(dir_path, file_name)
+
+
+def load_array(dir_path, file_name):
+    file_path = _file_path(dir_path, file_name)
+    if not os.path.isfile(file_path):
+        return None
+
+    with _open_file(file_path, 'rb') as file:
+        return np.load(file)
 
 
 def load_arrays(dir_path, file_name):
@@ -35,6 +50,12 @@ def _prepare_tmp_file(dir_path, file_name):
     pathlib.Path(dir_path).mkdir(parents=True, exist_ok=True)
     if os.path.isfile(file_path):
         copyfile(file_path, tmp_file_path)
+
+
+def _save_into_tmp_file(data, dir_path, file_name):
+    tmp_file_path = _tmp_file_path(dir_path, file_name)
+    with _open_file(tmp_file_path, 'wb') as temp_file:
+        np.save(temp_file, np.asarray(data))
 
 
 # noinspection PyTypeChecker

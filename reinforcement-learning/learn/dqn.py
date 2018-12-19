@@ -1,16 +1,17 @@
 import numpy as np
 import tensorflow as tf
-from collections import deque
 
 import ene
 from models.checkpoint import Checkpoint
 from models.dqn_mixin import DQNMixin
 from models.tensor_visualizer import TensorVisualizer
+from utils.cleanup_util import CleanupHelper
 from utils.functions import noop
 from utils.logger import Logger
 from learn.utils.progress_utils import ClearManager
 from learn.utils.environment_player import simulate_play
 from utils.replay_manager import ReplayManager
+from utils.replay_memory_writer import ReplayMemoryWriter
 
 DISCOUNT_RATE = 0.99
 REPLAY_MEMORY = 50000
@@ -76,21 +77,29 @@ def create_conv_networks(sess, env):
     return main_dqn, target_dqn
 
 
+def cleanup(checkpoint, replay_manager, replay_memory_writer, episode, **_):
+    checkpoint.save(episode, force=True)
+    replay_manager.save(episode, force=True)
+    replay_memory_writer.save()
+
+
 def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode):
     logger = Logger(main_dqn.log_dir_path)
     clear_manager = ClearManager()
     replay_manager = ReplayManager(main_dqn.id, flush_frequency=CHECKPOINT_FREQUENCY)
     checkpoint = Checkpoint(sess, main_dqn.id, save_frequency=CHECKPOINT_FREQUENCY).load()
+    replay_memory_writer = ReplayMemoryWriter(main_dqn.id).load()
+
     TensorVisualizer.instance.id = main_dqn.id
     TensorVisualizer.instance.setup()
 
-    select = ene.modes[ene_mode]
-    possible_states = getattr(env, 'possible_states', None)
-    replay_memory = deque(maxlen=50000)
+    CleanupHelper.instance.cleanup = cleanup
 
     copy_operations = target_dqn.build_copy_variables_from_operation(main_dqn)
     sess.run(copy_operations)
 
+    select = ene.modes[ene_mode]
+    possible_states = getattr(env, 'possible_states', None)
     action_spec = {
         'count': env.action_size,
         'generator': lambda s: main_dqn.predict(s)[0],
@@ -109,10 +118,11 @@ def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode)
                 actual_action, new_state, reward, done = env.step(action)
 
             clear_manager.save_reward(reward)
-            replay_memory.append((state, action, reward, new_state, done))
+            replay_memory_writer.append((state, action, reward, new_state, done))
 
-            if len(replay_memory) > BATCH_SIZE:
-                DQNMixin.replay_train(main_dqn, target_dqn, replay_memory, DISCOUNT_RATE, minibatch_size=BATCH_SIZE)
+            if len(replay_memory_writer) > BATCH_SIZE:
+                DQNMixin.replay_train(main_dqn, target_dqn, replay_memory_writer.replay_memory,
+                                      DISCOUNT_RATE, minibatch_size=BATCH_SIZE)
                 TensorVisualizer.instance.save_history()
             if env.steps % TARGET_UPDATE_FREQUENCY == 0:
                 sess.run(copy_operations)
@@ -132,4 +142,7 @@ def _train(sess, main_dqn, target_dqn, env, episodes, action_callback, ene_mode)
         if clear_manager.has_cleared(env):
             clear_manager.print_cleared_message(episode)
             simulate_play(env, main_dqn)
+            break
+
+        if CleanupHelper.instance.try_to_cleanup(checkpoint, replay_manager, replay_memory_writer, episode):
             break

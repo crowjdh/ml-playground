@@ -52,9 +52,9 @@ class ReplayManager:
         finally:
             np.random.set_state(state)
 
-    def save(self, episode):
+    def save(self, episode, force=False):
         self._pack_buffer()
-        if episode % self.flush_frequency == 0:
+        if episode % self.flush_frequency == 0 or force:
             self._flush_as(episode)
 
     def replay(self, env, start_idx=None, end_idx=None):
@@ -105,10 +105,15 @@ class ReplayManager:
         return history
 
     def _pack_buffer(self):
+        if len(self.buffer) == 0:
+            return
         self.buffers.append(self.buffer)
         self._reset_buffer()
 
     def _flush_as(self, episode):
+        if not self.is_dirty:
+            return
+
         prev_episode = self._load_episode() or 0
         buffer_size = len(self.buffers)
         if episode - prev_episode != buffer_size:
@@ -149,6 +154,10 @@ class ReplayManager:
     # noinspection PyAttributeOutsideInit
     def _reset_buffer(self):
         self.buffer = []
+
+    @property
+    def is_dirty(self):
+        return len(self.buffer) > 0 or len(self.buffers) > 0
 
     @property
     def replay_dir_path(self):

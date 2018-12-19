@@ -23,7 +23,6 @@ class RegressionNet(ABC):
 
     def __enter__(self):
         if self.write_tensor_log:
-            self._prepare_log_dir()
             self.merged_summery = tf.summary.merge_all(key=self.name)
             self.train_writer = tf.summary.FileWriter(self.log_dir_path, self.session.graph)
 
