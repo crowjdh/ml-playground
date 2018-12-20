@@ -5,7 +5,9 @@ import pathlib
 
 import numpy as np
 
-REPLAY_ROOT_DIR_PATH = '.replay'
+from utils.path import cache_dir_path
+
+REPLAY_ROOT_DIR_PATH = 'replay'
 
 
 def _parse_episode_range(episodes, start_idx, end_idx):
@@ -161,7 +163,7 @@ class ReplayManager:
 
     @property
     def replay_dir_path(self):
-        return os.path.join(REPLAY_ROOT_DIR_PATH, self.id)
+        return cache_dir_path(self.id, REPLAY_ROOT_DIR_PATH)
 
     @property
     def state_file_path(self):

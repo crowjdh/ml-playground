@@ -1,9 +1,9 @@
-import os
 from abc import ABC, abstractmethod
 from typing import *
 import tensorflow as tf
 from utils.functions import identity
 from models.tensor_visualizer import TensorVisualizer
+from utils.path import cache_dir_path
 
 
 class RegressionNet(ABC):
@@ -101,7 +101,7 @@ class RegressionNet(ABC):
 
     @property
     def log_dir_path(self):
-        return os.path.join('.logs', self.id)
+        return cache_dir_path(self.id, 'logs')
 
     # noinspection PyUnresolvedReferences,PyMethodMayBeStatic
     def _get_weight_initializer(self):

@@ -3,7 +3,9 @@ import pathlib
 
 import tensorflow as tf
 
-CHECKPOINT_DIR_NAME = '.checkpoints'
+from utils.path import cache_dir_path
+
+CHECKPOINT_DIR_NAME = 'checkpoints'
 
 
 class Checkpoint:
@@ -13,8 +15,6 @@ class Checkpoint:
         self.save_frequency = save_frequency
         self.episode_tensor = tf.Variable(initial_value=0, trainable=False)
         self.saver = tf.train.Saver(save_relative_paths=True)
-        self.checkpoint_dir_path = os.path.join(CHECKPOINT_DIR_NAME, checkpoint_name)
-        self.checkpoint_file = os.path.join(self.checkpoint_dir_path, 'model.ckpt')
 
         self._ensure_checkpoint_dir()
         self._init_tensors()
@@ -41,3 +41,11 @@ class Checkpoint:
             self.saver.restore(self.sess, os.path.join(self.checkpoint_dir_path, checkpoint_name))
 
         return self
+
+    @property
+    def checkpoint_dir_path(self):
+        return cache_dir_path(self.checkpoint_name, CHECKPOINT_DIR_NAME)
+
+    @property
+    def checkpoint_file(self):
+        return os.path.join(self.checkpoint_dir_path, 'model.ckpt')

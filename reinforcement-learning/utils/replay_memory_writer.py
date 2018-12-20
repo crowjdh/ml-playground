@@ -1,10 +1,10 @@
-import os
 from collections import deque
 
 from utils import numpy_writer
+from utils.path import cache_dir_path
 
 REPLAY_MEMORY_FILE_NAME = 'replay_memory'
-REPLAY_MEMORY_DIR_NAME = '.replay_memory'
+REPLAY_MEMORY_DIR_NAME = 'replay_memory'
 
 
 class ReplayMemoryWriter:
@@ -33,4 +33,4 @@ class ReplayMemoryWriter:
 
     @property
     def replay_memory_file_path(self):
-        return os.path.join(REPLAY_MEMORY_DIR_NAME, self.memory_id)
+        return cache_dir_path(self.memory_id, REPLAY_MEMORY_DIR_NAME)

@@ -6,9 +6,10 @@ import pathlib
 import numpy as np
 
 from utils import numpy_writer
+from utils.path import cache_dir_path
 from utils.singleton import Singleton
 
-VISUALIZER_ROOT_DIR_PATH = '.tensor_visualizer'
+VISUALIZER_ROOT_DIR_PATH = 'tensor_visualizer'
 LAYER_INFO_SEPARATOR = ','
 
 
@@ -34,6 +35,7 @@ class TensorVisualizer(metaclass=Singleton):
         self._save_layer_info()
 
     def _restore_update_count(self):
+        # TODO: Cache update count to restore exact number
         snapshot_numbers = self.snapshot_numbers
         if not os.path.isdir(self.visualizer_dir_path) or len(snapshot_numbers) == 0:
             return
@@ -218,7 +220,7 @@ class TensorVisualizer(metaclass=Singleton):
 
     @property
     def visualizer_dir_path(self):
-        return os.path.join(VISUALIZER_ROOT_DIR_PATH, self.id)
+        return cache_dir_path(self.id, VISUALIZER_ROOT_DIR_PATH)
 
     @property
     def visualizer_file_name(self):

@@ -41,6 +41,11 @@ def images(dir_name, snapshot_number):
                            snapshot_numbers=snapshot_numbers, image_indices=image_indices, layer_indices=layer_indices)
 
 
+@app.errorhandler(FileNotFoundError)
+def file_not_found_error_handler(error):
+    return str(error), 404
+
+
 def parse_arguments(all_images, layer_info, snapshot_numbers, snapshot_number):
     try:
         snapshot_number = int(snapshot_number)
@@ -65,9 +70,12 @@ def parse_arguments(all_images, layer_info, snapshot_numbers, snapshot_number):
 
 def get_snapshot_indices(snapshot_numbers, count=10, add_last_snapshot=True):
     length = len(snapshot_numbers)
-    unit = round(length / count)
+    unit = max(round(length / count), 1)
 
     indices = [i for i in range(0, length, unit)]
+
+    if len(indices) == 0:
+        raise FileNotFoundError("No snapshots found")
 
     last_possible_idx = length - 1
     if add_last_snapshot and last_possible_idx > indices[-1]:
