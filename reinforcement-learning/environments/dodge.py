@@ -30,8 +30,10 @@ class DodgeEnv(Dodge, Environment):
     def __init__(self, threshold=500, headless_mode=False, is_stochastic=True):
         disable_pygame_display() if headless_mode else noop
         Dodge.__init__(self, move_zombies_randomly=is_stochastic)
-        Environment.__init__(self, list(DodgeEnv.screen_size) + [1], len(DodgeEnv.actions), threshold,
+        Environment.__init__(self, list(DodgeEnv.screen_size), len(DodgeEnv.actions), threshold,
                              is_stochastic=is_stochastic, network_mode=Environment.convolution)
+
+        self.resize_to = None
 
     def step(self, action) -> tuple:
         unflattened_action = self.unflatten_action(action)
@@ -74,4 +76,9 @@ class DodgeEnv(Dodge, Environment):
     @property
     def frame(self):
         ensure_draw()
-        return np.expand_dims(get_grayscale_frame(), axis=-1)
+
+        f = np.expand_dims(get_grayscale_frame(), axis=-1)
+        from utils import image_util
+        if self.resize_to is not None:
+            f = image_util.resize(f, self.resize_to)
+        return f

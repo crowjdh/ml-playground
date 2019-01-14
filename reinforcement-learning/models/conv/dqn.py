@@ -11,10 +11,7 @@ class ConvDQN(ConvRegressionNet, DQNMixin):
         tf.summary.scalar('loss', self._loss_tensor, collections=[self.name])
 
     def _create_loss_tensor(self) -> tf.Tensor:
-        # Huber loss makes loss smaller, which makes dqn less likely to diverge
-        # See: https://en.wikipedia.org/wiki/Huber_loss
-        huber_loss = tf.losses.huber_loss(self._y, self._activation_out)
-        return tf.reduce_mean(huber_loss)
+        return tf.losses.mean_squared_error(self._y, self._activation_out)
 
     def _get_optimizer_type(self) -> Type[tf.train.Optimizer]:
         return tf.train.RMSPropOptimizer

@@ -28,11 +28,18 @@ class DQNMixin:
     @staticmethod
     def parse_minibatch_vectorized(minibatch, main_dqn, target_dqn, gamma):
         def unravel(values):
-            shape = [values.shape[0]] + list(values[0].shape)
+            batch_count = values.shape[0]
+            batch_shape = values[0].shape
+
+            is_scalar = np.prod(batch_shape) == 1
+            shape = [batch_count]
+            if not is_scalar:
+                shape += list(batch_shape)
+
             new_values = np.empty(shape)
             for i in range(len(values)):
                 value = values[i]
-                new_values[i] = value
+                new_values[i] = np.asscalar(value) if is_scalar else value
 
             return new_values
 

@@ -104,7 +104,7 @@ class FrozenLake(Environment):
 
     @property
     def possible_states(self):
-        return range(FrozenLake.size[0] * FrozenLake.size[1])
+        return list(range(FrozenLake.size[0] * FrozenLake.size[1]))
 
     def get_summary_lines(self, Q):
         from functools import reduce

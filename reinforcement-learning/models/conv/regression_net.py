@@ -1,9 +1,13 @@
 from abc import abstractmethod
 from typing import *
+from collections import Iterable
+from numbers import Complex
+
 import tensorflow as tf
 import numpy as np
 
 from models.regression_net import RegressionNet
+from utils import image_util
 
 
 class ConvRegressionNet(RegressionNet):
@@ -11,7 +15,7 @@ class ConvRegressionNet(RegressionNet):
 
     """
       Args:
-        input_shape: [N, C, W, H]
+        input_shape: [C, W, H]
         filter_shapes: [[F_N, F_C, WW, HH], ...]
         strides: Array which contains stride of each filter. Should be:
             len(strides) == len(filter_shapes)
@@ -19,17 +23,30 @@ class ConvRegressionNet(RegressionNet):
             len(paddings) == len(filter_shapes)
     """
     def __init__(self, session, env_id, input_shape, filter_shapes, strides, paddings, hidden_sizes, output_size,
-                 learning_rate=1e-3, use_bias=True, name='main', write_tensor_log=True, visualize=True):
-        self.input_shape = input_shape
+                 learning_rate=1e-3, use_bias=True, name='main', write_tensor_log=True, visualize=True,
+                 resize_ratio=None):
+        self.input_shape = list(input_shape)
         self.filter_shapes = filter_shapes
         self.strides = strides
         self.paddings = paddings
         self.hidden_sizes = hidden_sizes
         self.output_size = output_size
-        # self.output_shape = self.calc_output_shape()
+        self.resize_ratio = resize_ratio
+
+        self.input_shape[:2] = self.resize(self.input_shape[:2])
 
         super().__init__(session, env_id, learning_rate=learning_rate, use_bias=use_bias, name=name,
                          write_tensor_log=write_tensor_log, visualize=visualize)
+
+    def resize(self, obj):
+        if self.resize_ratio is None:
+            return obj
+        if isinstance(obj, Iterable):
+            return [int(l * self.resize_ratio) for l in obj]
+        elif isinstance(obj, Complex):
+            return int(obj * self.resize_ratio)
+        else:
+            raise ValueError("Cannot operate resize to {} type".format(type(obj)))
 
     def calc_output_shape(self):
         # noinspection PyShadowingNames
@@ -127,8 +144,12 @@ class ConvRegressionNet(RegressionNet):
         return logit, activation_out
 
     def _process_input(self, values):
+        if len(values) == 0:
+            return None
         if len(values.shape) == 3:
             values = values[np.newaxis]
+        if self.resize_ratio is not None:
+            values = image_util.resize(values, self.input_shape[:2])
         values = (values - values.mean()) / values.std()
 
         return values

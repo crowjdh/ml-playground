@@ -167,7 +167,7 @@ class RegressionNet(ABC):
         are_invalid_inputs = states is None and probabilities is not None
         assert not are_invalid_inputs
 
-        if states is not None and len(states) > 0:
+        if states is not None:
             states = self._process_input(states)
             feed_dict = {self._states: states}
 

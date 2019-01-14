@@ -20,7 +20,7 @@ all_images_dict = {}
 
 @app.route('/<dir_name>', defaults={'snapshot_number': 1})
 @app.route('/<dir_name>/<snapshot_number>')
-def index(dir_name, snapshot_number):
+def index_route(dir_name, snapshot_number):
     all_images, snapshot_numbers, layer_info = load_images(dir_name)
     snapshot_idx, arg_img_idx, layer_name, image_indices, layer_indices, layer_names =\
         parse_arguments(all_images, layer_info, snapshot_numbers, snapshot_number)
@@ -31,7 +31,7 @@ def index(dir_name, snapshot_number):
 
 
 @app.route('/<dir_name>/<snapshot_number>/images')
-def images(dir_name, snapshot_number):
+def images_route(dir_name, snapshot_number):
     all_images, snapshot_numbers, layer_info = load_images(dir_name)
     snapshot_idx, arg_img_idx, layer_name, image_indices, layer_indices, layer_names =\
         parse_arguments(all_images, layer_info, snapshot_numbers, snapshot_number)
@@ -159,8 +159,10 @@ def get_converters(layer_mode):
 
 
 def convert_images_into_b64_images(images):
-    return [convert_array_into_b64_image(np.squeeze(image, axis=-1), resize_to=IMG_SIZE,
-                                         normalize_bound=NORMALIZE_BOUND, ptp=np.ptp(images)) for image in images]
+    is_gif = images.shape[-1] > 1
+    return [convert_array_into_b64_image(image if is_gif else np.squeeze(image, axis=-1), resize_to=IMG_SIZE,
+                                         normalize_bound=NORMALIZE_BOUND, ptp=np.ptp(images), as_gif=is_gif)
+            for image in images]
 
 
 def calc_max_ptp_for_gradient(layer):
@@ -297,32 +299,48 @@ def convert_dense_activation_into_b64_images(activation, resize_to=None, normali
     return [convert_array_into_b64_image(activation, resize_to=resize_to, normalize_bound=normalize_bound, ptp=ptp)]
 
 
-def convert_array_into_b64_image(numpy_image, resize_to=None, normalize_bound=None, ptp=None):
+def convert_array_into_b64_image(numpy_image, resize_to=None, normalize_bound=None, ptp=None, as_gif=False):
+    numpy_image = normalize_numpy_image(numpy_image, normalize_bound, ptp)
+    numpy_image = numpy_image.astype(np.uint8)
+
+    image_buffer = BytesIO()
+    if as_gif:
+        save_numpy_image_as_gif_to(numpy_image, resize_to, image_buffer)
+    else:
+        save_numpy_image_to(numpy_image, resize_to, image_buffer)
+
+    return b64encode(image_buffer.getvalue()).decode('utf8')
+
+
+def normalize_numpy_image(numpy_image, normalize_bound, ptp):
     if normalize_bound and ptp:
         if ptp != 0:
             numpy_image = normalize_bound * (numpy_image - numpy_image.min()) / ptp
-    numpy_image = numpy_image.astype(np.uint8)
 
+    return numpy_image
+
+
+def save_numpy_image_as_gif_to(numpy_image, resize_to, image_buffer):
+    images = [resize(Image.fromarray(numpy_image[:, :, i]), resize_to) for i in range(numpy_image.shape[-1])]
+    image, additional_frames = images[0], images[1:]
+
+    image.save(image_buffer, save_all=True, format="GIF", duration=300, loop=0, append_images=additional_frames)
+
+
+def save_numpy_image_to(numpy_image, resize_to, image_buffer):
     image = Image.fromarray(numpy_image)
-
-    # TODO: Remove if unnecessary
-    # if IMG_SCALE:
-    #     width, height = image.size
-    #     width = int(width * IMG_SCALE)
-    #     height = int(height * IMG_SCALE)
-    #     if width > 1 and height > 1:
-    #         image = image.resize((width, height))
-    if resize_to:
-        width, height = image.size
-        width_over_height = width / height
-        if resize_to[0] is not None and resize_to[1] is None:
-            resize_to = (resize_to[0], int(resize_to[0] * (1.0 / width_over_height)))
-        elif resize_to[0] is None and resize_to[1] is not None:
-            resize_to = (int(resize_to[1] * width_over_height), resize_to[1])
-        image = image.resize(resize_to)
-
-    image_buffer = BytesIO()
+    image = resize(image, resize_to)
     image.save(image_buffer, format="PNG")
-    b64_image = b64encode(image_buffer.getvalue()).decode('utf8')
 
-    return b64_image
+
+def resize(image, resize_to):
+    if resize_to is None:
+        return image
+
+    width, height = image.size
+    width_over_height = width / height
+    if resize_to[0] is not None and resize_to[1] is None:
+        resize_to = (resize_to[0], int(resize_to[0] * (1.0 / width_over_height)))
+    elif resize_to[0] is None and resize_to[1] is not None:
+        resize_to = (int(resize_to[1] * width_over_height), resize_to[1])
+    return image.resize(resize_to)
